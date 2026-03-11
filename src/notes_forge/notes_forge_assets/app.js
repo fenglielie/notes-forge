@@ -51,6 +51,8 @@ const MIN_LEFT_SIDEBAR = 220;
 const MAX_LEFT_SIDEBAR = 560;
 const MIN_RIGHT_SIDEBAR = 220;
 const MAX_RIGHT_SIDEBAR = 520;
+const DESKTOP_DOCKED_CONTENT_MIN = 960;
+const DESKTOP_RESIZER_SIZE = 18;
 let scrollSaveTimer = null;
 let hljsReadyPromise = null;
 let currentPdfBlobUrl = null;
@@ -65,8 +67,6 @@ let currentTreeData = [];
 let searchableFiles = [];
 const searchContentCache = new Map();
 let searchIndexBuildPromise = null;
-let desktopOffsetRafId = 0;
-let desktopOffsetSyncUntil = 0;
 const HLJS_VERSION = "11.8.0";
 const REQUIRED_HLJS_LANGS = [
     { name: "c", url: `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HLJS_VERSION}/build/languages/c.min.js` },
@@ -1004,18 +1004,64 @@ function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
 }
 
+function getSidebarWidthVar(propertyName, min, max) {
+    const width = parseFloat(getComputedStyle(appEl).getPropertyValue(propertyName));
+    return Number.isFinite(width) ? clamp(width, min, max) : min;
+}
+
+function isDockedDesktop() {
+    return !isMobile() && appEl.classList.contains("desktop-docked");
+}
+
+function isSidebarOverlayMode() {
+    return isMobile() || appEl.classList.contains("desktop-overlay");
+}
+
+function canUseDockedDesktop() {
+    if (isMobile()) return false;
+    const slotWidth = computeDesktopSideSlot();
+    return window.innerWidth >= DESKTOP_DOCKED_CONTENT_MIN + (slotWidth * 2);
+}
+
+function computeDesktopSideSlot() {
+    const leftWidth = hideTreeUi || appEl.classList.contains("left-collapsed")
+        ? 0
+        : getSidebarWidthVar("--left-sidebar-width", MIN_LEFT_SIDEBAR, MAX_LEFT_SIDEBAR);
+    const rightWidth = hideTocUi || appEl.classList.contains("right-collapsed")
+        ? 0
+        : getSidebarWidthVar("--right-sidebar-width", MIN_RIGHT_SIDEBAR, MAX_RIGHT_SIDEBAR);
+    return Math.max(leftWidth, rightWidth);
+}
+
+function getSidebarBounds(side) {
+    const isLeft = side === "left";
+    const hardMin = isLeft ? MIN_LEFT_SIDEBAR : MIN_RIGHT_SIDEBAR;
+    const hardMax = isLeft ? MAX_LEFT_SIDEBAR : MAX_RIGHT_SIDEBAR;
+    if (!isDockedDesktop()) {
+        return { min: hardMin, max: hardMax };
+    }
+    const slotWidth = Math.max(0, computeDesktopSideSlot());
+    const max = Math.min(hardMax, slotWidth);
+    const min = Math.min(hardMin, max);
+    return { min, max };
+}
+
 function setSidebarWidthVars(leftWidth, rightWidth) {
     if (Number.isFinite(leftWidth)) {
-        appEl.style.setProperty("--left-sidebar-width", `${clamp(leftWidth, MIN_LEFT_SIDEBAR, MAX_LEFT_SIDEBAR)}px`);
+        const bounds = getSidebarBounds("left");
+        appEl.style.setProperty("--left-sidebar-width", `${clamp(leftWidth, bounds.min, bounds.max)}px`);
     }
     if (Number.isFinite(rightWidth)) {
-        appEl.style.setProperty("--right-sidebar-width", `${clamp(rightWidth, MIN_RIGHT_SIDEBAR, MAX_RIGHT_SIDEBAR)}px`);
+        const bounds = getSidebarBounds("right");
+        appEl.style.setProperty("--right-sidebar-width", `${clamp(rightWidth, bounds.min, bounds.max)}px`);
     }
 }
 
 function getSidebarWidths() {
-    const leftWidth = parseFloat(getComputedStyle(sidebar).width);
-    const rightWidth = parseFloat(getComputedStyle(tocSidebar).width);
+    const leftBounds = getSidebarBounds("left");
+    const rightBounds = getSidebarBounds("right");
+    const leftWidth = getSidebarWidthVar("--left-sidebar-width", leftBounds.min, leftBounds.max);
+    const rightWidth = getSidebarWidthVar("--right-sidebar-width", rightBounds.min, rightBounds.max);
     return { leftWidth, rightWidth };
 }
 
@@ -1102,34 +1148,64 @@ function applyDesktopLayoutFromStorage() {
 function toggleLeftSidebarDesktop() {
     if (hideTreeUi) return;
     if (isMobile()) return;
-    appEl.classList.toggle("left-collapsed");
-    saveDesktopLayout();
-    syncTopActionsOffset();
+    if (isDockedDesktop()) {
+        appEl.classList.toggle("left-collapsed");
+        saveDesktopLayout();
+        syncTopActionsOffset();
+        return;
+    }
+    if (sidebar.classList.contains("open")) {
+        closePanels();
+    } else {
+        openTreePanel();
+    }
 }
 
 function toggleRightSidebarDesktop() {
     if (hideTocUi) return;
     if (isMobile()) return;
-    appEl.classList.toggle("right-collapsed");
-    saveDesktopLayout();
-    syncTopActionsOffset();
+    if (isDockedDesktop()) {
+        appEl.classList.toggle("right-collapsed");
+        saveDesktopLayout();
+        syncTopActionsOffset();
+        return;
+    }
+    if (tocSidebar.classList.contains("open")) {
+        closePanels();
+    } else {
+        openTocPanel();
+    }
 }
 
 function bindSidebarResizer(resizerEl, side) {
     if (!resizerEl) return;
     let active = false;
+    let pointerId = null;
     let startX = 0;
     let startWidth = 0;
+    let startedCollapsed = false;
+
+    const isLeft = side === "left";
+    const collapsedClass = isLeft ? "left-collapsed" : "right-collapsed";
 
     const onMove = (event) => {
-        if (!active || isMobile()) return;
+        if (!active || !isDockedDesktop()) return;
+        const { min: minWidth, max: maxWidth } = getSidebarBounds(side);
         const dx = event.clientX - startX;
-        if (side === "left") {
-            const next = clamp(startWidth + dx, MIN_LEFT_SIDEBAR, MAX_LEFT_SIDEBAR);
-            setSidebarWidthVars(next, NaN);
+        const rawWidth = isLeft ? (startWidth + dx) : (startWidth - dx);
+
+        if (startedCollapsed && rawWidth <= 0) {
+            appEl.classList.add(collapsedClass);
+        } else if (!startedCollapsed && rawWidth < minWidth) {
+            appEl.classList.add(collapsedClass);
         } else {
-            const next = clamp(startWidth - dx, MIN_RIGHT_SIDEBAR, MAX_RIGHT_SIDEBAR);
-            setSidebarWidthVars(NaN, next);
+            const nextWidth = clamp(rawWidth, minWidth, maxWidth);
+            appEl.classList.remove(collapsedClass);
+            if (isLeft) {
+                setSidebarWidthVars(nextWidth, NaN);
+            } else {
+                setSidebarWidthVars(NaN, nextWidth);
+            }
         }
         syncTopActionsOffset();
     };
@@ -1137,82 +1213,60 @@ function bindSidebarResizer(resizerEl, side) {
     const onUp = () => {
         if (!active) return;
         active = false;
+        pointerId = null;
         resizerEl.classList.remove("active");
         document.body.style.userSelect = "";
         saveDesktopLayout();
     };
 
-    resizerEl.addEventListener("mousedown", (event) => {
-        if (isMobile()) return;
-        if (side === "left" && appEl.classList.contains("left-collapsed")) return;
-        if (side === "right" && appEl.classList.contains("right-collapsed")) return;
+    resizerEl.addEventListener("pointerdown", (event) => {
+        if (!isDockedDesktop()) return;
         active = true;
+        pointerId = event.pointerId;
+        startedCollapsed = appEl.classList.contains(collapsedClass);
         startX = event.clientX;
-        startWidth = side === "left"
-            ? parseFloat(getComputedStyle(sidebar).width)
-            : parseFloat(getComputedStyle(tocSidebar).width);
+        startWidth = startedCollapsed
+            ? 0
+            : (isLeft
+                ? parseFloat(getComputedStyle(sidebar).width)
+                : parseFloat(getComputedStyle(tocSidebar).width));
+        resizerEl.setPointerCapture(pointerId);
         resizerEl.classList.add("active");
         document.body.style.userSelect = "none";
         event.preventDefault();
     });
 
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", (event) => {
+        if (pointerId !== null && event.pointerId !== pointerId) return;
+        onMove(event);
+    });
+    window.addEventListener("pointerup", (event) => {
+        if (pointerId !== null && event.pointerId !== pointerId) return;
+        onUp();
+    });
+    window.addEventListener("pointercancel", (event) => {
+        if (pointerId !== null && event.pointerId !== pointerId) return;
+        onUp();
+    });
 }
 
-function updateDesktopTopActionsOffset() {
-    if (hideTocUi || appEl.classList.contains("right-collapsed")) {
-        appEl.style.setProperty("--desktop-right-offset", "0px");
-        return;
+function syncDesktopLayoutMode() {
+    const docked = canUseDockedDesktop();
+    appEl.classList.toggle("desktop-docked", docked);
+    appEl.classList.toggle("desktop-overlay", !docked && !isMobile());
+    appEl.style.setProperty("--desktop-side-slot", docked ? `${computeDesktopSideSlot()}px` : "0px");
+    const { leftWidth, rightWidth } = getSidebarWidths();
+    setSidebarWidthVars(leftWidth, rightWidth);
+    if (!isSidebarOverlayMode()) {
+        sidebar.classList.remove("open");
+        tocSidebar.classList.remove("open");
+        backdrop.classList.remove("show");
+        document.body.style.overflow = "";
     }
-    const rect = tocSidebar.getBoundingClientRect();
-    const visibleWidth = Math.max(0, Math.round(window.innerWidth - rect.left));
-    const rightOffset = visibleWidth > 0 ? `${visibleWidth}px` : "0px";
-    appEl.style.setProperty("--desktop-right-offset", rightOffset);
-}
-
-function updateDesktopContentOffset() {
-    if (isMobile()) {
-        appEl.style.setProperty("--desktop-content-offset", "0px");
-        return;
-    }
-    const leftWidth = hideTreeUi ? 0 : (
-        (sidebar?.getBoundingClientRect().width || 0) +
-        (leftResizer?.getBoundingClientRect().width || 0)
-    );
-    const rightWidth = hideTocUi ? 0 : (
-        (tocSidebar?.getBoundingClientRect().width || 0) +
-        (rightResizer?.getBoundingClientRect().width || 0)
-    );
-    const rawOffset = (rightWidth - leftWidth) / 2;
-    const contentWidth = contentEl?.clientWidth || 0;
-    const articleWidth = articleWrapper?.offsetWidth || 0;
-    const maxShift = Math.max(0, (contentWidth - articleWidth) / 2);
-    const offset = clamp(rawOffset, -maxShift, maxShift);
-    appEl.style.setProperty("--desktop-content-offset", `${Math.round(offset)}px`);
-}
-
-function scheduleDesktopContentOffsetSync(durationMs = 340) {
-    if (isMobile()) return;
-    const now = performance.now();
-    desktopOffsetSyncUntil = Math.max(desktopOffsetSyncUntil, now + durationMs);
-    if (desktopOffsetRafId) return;
-    const tick = () => {
-        updateDesktopTopActionsOffset();
-        updateDesktopContentOffset();
-        if (performance.now() < desktopOffsetSyncUntil) {
-            desktopOffsetRafId = requestAnimationFrame(tick);
-        } else {
-            desktopOffsetRafId = 0;
-        }
-    };
-    desktopOffsetRafId = requestAnimationFrame(tick);
 }
 
 function syncTopActionsOffset() {
-    updateDesktopTopActionsOffset();
-    updateDesktopContentOffset();
-    scheduleDesktopContentOffsetSync();
+    syncDesktopLayoutMode();
 }
 
 function setActiveFile(path) {
@@ -1248,7 +1302,7 @@ function closePanels() {
 
 function openTreePanel() {
     if (hideTreeUi) return;
-    if (!isMobile()) return;
+    if (!isSidebarOverlayMode()) return;
     sidebar.classList.add("open");
     tocSidebar.classList.remove("open");
     backdrop.classList.add("show");
@@ -1258,7 +1312,7 @@ function openTreePanel() {
 
 function openTocPanel() {
     if (hideTocUi) return;
-    if (!isMobile()) return;
+    if (!isSidebarOverlayMode()) return;
     tocSidebar.classList.add("open");
     sidebar.classList.remove("open");
     backdrop.classList.add("show");
@@ -1991,7 +2045,7 @@ refreshTreeBtn.addEventListener("click", () => {
 });
 closeTreeBtn.addEventListener("click", () => {
     if (hideTreeUi) return;
-    if (isMobile()) {
+    if (isSidebarOverlayMode()) {
         closePanels();
     } else {
         appEl.classList.add("left-collapsed");
@@ -2001,7 +2055,7 @@ closeTreeBtn.addEventListener("click", () => {
 });
 closeTocBtn.addEventListener("click", () => {
     if (hideTocUi) return;
-    if (isMobile()) {
+    if (isSidebarOverlayMode()) {
         closePanels();
     } else {
         appEl.classList.add("right-collapsed");

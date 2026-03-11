@@ -13,6 +13,7 @@ from notes_forge.cli_options import (
     add_include_argument,
     add_log_level_argument,
     add_search_argument,
+    add_theme_argument,
     add_ui_toggle_arguments,
     normalize_include_formats,
 )
@@ -56,6 +57,7 @@ def args_parse() -> argparse.Namespace:
     add_ui_toggle_arguments(parser)
     add_search_argument(parser)
     add_download_argument(parser)
+    add_theme_argument(parser)
     add_footer_argument(parser)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -74,6 +76,7 @@ def args_parse() -> argparse.Namespace:
     )
     add_search_argument(build_parser, default=argparse.SUPPRESS)
     add_download_argument(build_parser, default=argparse.SUPPRESS)
+    add_theme_argument(build_parser, default=argparse.SUPPRESS)
     add_footer_argument(build_parser, default=argparse.SUPPRESS)
     build_parser.add_argument(
         "input_dir",
@@ -115,6 +118,7 @@ def args_parse() -> argparse.Namespace:
     )
     add_search_argument(serve_parser, default=argparse.SUPPRESS)
     add_download_argument(serve_parser, default=argparse.SUPPRESS)
+    add_theme_argument(serve_parser, default=argparse.SUPPRESS)
     add_footer_argument(serve_parser, default=argparse.SUPPRESS)
     serve_parser.add_argument(
         "--html-from",
@@ -199,6 +203,8 @@ def main() -> None:
                 log_notice("UI option        : enable search")
             if args.enable_download:
                 log_notice("UI option        : enable download button")
+            if args.enable_theme:
+                log_notice("UI option        : enable theme button")
             if args.footer != DEFAULT_FOOTER_TEXT:
                 log_notice(f"UI footer        : {args.footer}")
             logger.debug(
@@ -214,6 +220,7 @@ def main() -> None:
                 hide_toc=args.hide_toc,
                 enable_search=args.enable_search,
                 enable_download=args.enable_download,
+                enable_theme=args.enable_theme,
                 footer_text=args.footer,
             )
             return
@@ -251,6 +258,10 @@ def main() -> None:
                     logger.warning(
                         "--enable-download is ignored in --html-from mode (UI is prebuilt)."
                     )
+                if args.enable_theme:
+                    logger.warning(
+                        "--enable-theme is ignored in --html-from mode (UI is prebuilt)."
+                    )
                 if args.footer != DEFAULT_FOOTER_TEXT:
                     logger.warning(
                         "--footer is ignored in --html-from mode (UI is prebuilt)."
@@ -280,6 +291,8 @@ def main() -> None:
                 log_notice("UI option        : enable search")
             if args.enable_download:
                 log_notice("UI option        : enable download button")
+            if args.enable_theme:
+                log_notice("UI option        : enable theme button")
             if args.footer != DEFAULT_FOOTER_TEXT:
                 log_notice(f"UI footer        : {args.footer}")
             logger.debug(
@@ -297,6 +310,7 @@ def main() -> None:
                 hide_toc=args.hide_toc,
                 enable_search=args.enable_search,
                 enable_download=args.enable_download,
+                enable_theme=args.enable_theme,
                 footer_text=args.footer,
             )
             return

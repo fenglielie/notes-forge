@@ -123,6 +123,7 @@ def build_site(
     hide_toc: bool = False,
     enable_search: bool = False,
     enable_download: bool = False,
+    enable_theme: bool = False,
     footer_text: str = "",
 ) -> None:
     input_dir = input_dir.resolve()
@@ -163,6 +164,7 @@ def build_site(
             hide_toc=hide_toc,
             enable_search=enable_search,
             enable_download=enable_download,
+            enable_theme=enable_theme,
             footer_text=footer_text,
             serve_mode=False,
         ),

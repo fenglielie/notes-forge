@@ -29,7 +29,7 @@ Homepage = "https://github.com/fenglielie/notes-forge"
 Repository = "https://github.com/fenglielie/notes-forge"
 
 [project.scripts]
-notes-forge = "notes_forge.notes_forge:main"
+notes-forge = "notes_forge.cli_app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -5,6 +5,7 @@ import argparse
 from notes_forge.constants import (
     DEFAULT_ENABLE_DOWNLOAD,
     DEFAULT_ENABLE_SEARCH,
+    DEFAULT_ENABLE_THEME,
     DEFAULT_FOOTER_TEXT,
     DEFAULT_HIDE_TOC,
     DEFAULT_HIDE_TREE,
@@ -107,6 +108,17 @@ def add_download_argument(
         action="store_true",
         default=default,
         help="Show a download button in frontend to download the current raw md/pdf/ipynb file.",
+    )
+
+
+def add_theme_argument(
+    parser: argparse.ArgumentParser, *, default: bool | object = DEFAULT_ENABLE_THEME
+) -> None:
+    parser.add_argument(
+        "--enable-theme",
+        action="store_true",
+        default=default,
+        help="Show a theme toggle button in frontend.",
     )
 
 

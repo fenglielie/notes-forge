@@ -43,6 +43,7 @@
   - `--hide-toc`
   - `--enable-search`
   - `--enable-download`
+  - `--enable-theme`
   - `--footer "..."`
 - 面向本地使用的默认服务行为：
   - 默认绑定地址为 `127.0.0.1`
@@ -103,6 +104,7 @@ notes-forge build [input_dir] -o [output_dir]
 - `--hide-toc`
 - `--enable-search`
 - `--enable-download`
+- `--enable-theme`
 - `--footer "你的页脚文案"`
 
 ### serve
@@ -144,8 +146,8 @@ notes-forge build . -o public --copy-all-files
 # 忽略多个目录
 notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 
-# 启用搜索和下载按钮
-notes-forge serve --md-from . --enable-search --enable-download
+# 启用搜索、下载和主题按钮
+notes-forge serve --md-from . --enable-search --enable-download --enable-theme
 
 # 添加固定页脚
 notes-forge serve --md-from . --footer "© 2026 Your Name"
@@ -177,7 +179,6 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
 
 内部模块结构如下：
 
-- `notes_forge/notes_forge.py`：稳定的公开入口/兼容门面，以及 CLI 入口目标。
 - `notes_forge/cli_app.py`：命令解析与顶层命令调度。
 - `notes_forge/cli_options.py`：可复用的 argparse 参数定义与 `--include` 归一化。
 - `notes_forge/build_ops.py`：`build`/`clean` 相关逻辑、复制策略与安全清理。
@@ -189,17 +190,16 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
 
 ```mermaid
 flowchart TD
-    A["notes_forge.py（入口）"] --> B["cli_app.py"]
-    B --> C["cli_options.py"]
-    B --> D["build_ops.py"]
-    B --> E["server_ops.py"]
-    D --> F["fs_tree.py"]
-    D --> G["ui_assets.py"]
-    E --> F
-    E --> G
-    B --> H["runtime_logging.py"]
-    C --> I["constants.py"]
-    D --> I
-    E --> I
-    F --> I
+    A["cli_app.py（入口）"] --> B["cli_options.py"]
+    A --> C["build_ops.py"]
+    A --> D["server_ops.py"]
+    C --> E["fs_tree.py"]
+    C --> F["ui_assets.py"]
+    D --> E
+    D --> F
+    A --> G["runtime_logging.py"]
+    B --> H["constants.py"]
+    C --> H
+    D --> H
+    E --> H
 ```

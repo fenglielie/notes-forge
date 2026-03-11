@@ -24,6 +24,7 @@ DEFAULT_HIDE_TREE = False
 DEFAULT_HIDE_TOC = False
 DEFAULT_ENABLE_SEARCH = False
 DEFAULT_ENABLE_DOWNLOAD = False
+DEFAULT_ENABLE_THEME = False
 DEFAULT_FOOTER_TEXT = (
     f"© {datetime.now().year} Notes Forge · "
     "[GitHub](https://github.com/fenglielie/notes-forge) · "

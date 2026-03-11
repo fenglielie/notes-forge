@@ -27,7 +27,7 @@ def create_http_access_logger(log_file: Path | None) -> logging.Logger | None:
     resolved_file = log_file.expanduser().resolve()
     resolved_file.parent.mkdir(parents=True, exist_ok=True)
 
-    http_logger = logging.getLogger("notes_forge.notes_forge.http_access")
+    http_logger = logging.getLogger("notes_forge.cli_app.http_access")
     http_logger.setLevel(logging.INFO)
     http_logger.propagate = False
 

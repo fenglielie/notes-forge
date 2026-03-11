@@ -58,6 +58,7 @@ def render_index_html(
     hide_toc: bool = False,
     enable_search: bool = False,
     enable_download: bool = False,
+    enable_theme: bool = False,
     footer_text: str = "",
     serve_mode: bool = False,
 ) -> str:
@@ -66,6 +67,7 @@ def render_index_html(
         "hideToc": hide_toc,
         "enableSearch": enable_search,
         "enableDownload": enable_download,
+        "enableTheme": enable_theme,
         "footerText": footer_text,
         "serveMode": serve_mode,
     }

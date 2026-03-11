@@ -36,6 +36,7 @@ const hideTreeUi = !!runtimeConfig.hideTree;
 const hideTocUi = !!runtimeConfig.hideToc;
 const enableSearchUi = !!runtimeConfig.enableSearch;
 const enableDownloadUi = !!runtimeConfig.enableDownload;
+const enableThemeUi = !!runtimeConfig.enableTheme;
 const serveModeUi = !!runtimeConfig.serveMode;
 const footerText = typeof runtimeConfig.footerText === "string"
     ? runtimeConfig.footerText.trim()
@@ -1944,6 +1945,9 @@ function applyUiConfig() {
     }
     if (downloadBtn) {
         downloadBtn.hidden = !enableDownloadUi;
+    }
+    if (themeToggleBtn) {
+        themeToggleBtn.hidden = !enableThemeUi;
     }
 }
 

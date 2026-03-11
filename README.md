@@ -43,6 +43,7 @@ Unlike many documentation-oriented tools, it does not require a config file, a t
   - `--hide-toc`
   - `--enable-search`
   - `--enable-download`
+  - `--enable-theme`
   - `--footer "..."`
 - Local-first serving defaults:
   - Default bind address `127.0.0.1`
@@ -103,6 +104,7 @@ Common options:
 - `--hide-toc`
 - `--enable-search`
 - `--enable-download`
+- `--enable-theme`
 - `--footer "your footer text"`
 
 ### serve
@@ -144,8 +146,8 @@ notes-forge build . -o public --copy-all-files
 # Ignore multiple directories
 notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 
-# Enable search and download button
-notes-forge serve --md-from . --enable-search --enable-download
+# Enable search, download, and theme buttons
+notes-forge serve --md-from . --enable-search --enable-download --enable-theme
 
 # Add fixed footer
 notes-forge serve --md-from . --footer "© 2026 Your Name"
@@ -177,7 +179,6 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
 
 Internal module layout:
 
-- `notes_forge/notes_forge.py`: stable public entry/facade and CLI entrypoint target.
 - `notes_forge/cli_app.py`: command parsing and top-level command orchestration.
 - `notes_forge/cli_options.py`: reusable argparse option builders and include normalization.
 - `notes_forge/build_ops.py`: `build` and `clean` operations, file copy policy, safe cleanup.
@@ -189,17 +190,16 @@ Internal module layout:
 
 ```mermaid
 flowchart TD
-    A["notes_forge.py (entry)"] --> B["cli_app.py"]
-    B --> C["cli_options.py"]
-    B --> D["build_ops.py"]
-    B --> E["server_ops.py"]
-    D --> F["fs_tree.py"]
-    D --> G["ui_assets.py"]
-    E --> F
-    E --> G
-    B --> H["runtime_logging.py"]
-    C --> I["constants.py"]
-    D --> I
-    E --> I
-    F --> I
+    A["cli_app.py (entry)"] --> B["cli_options.py"]
+    A --> C["build_ops.py"]
+    A --> D["server_ops.py"]
+    C --> E["fs_tree.py"]
+    C --> F["ui_assets.py"]
+    D --> E
+    D --> F
+    A --> G["runtime_logging.py"]
+    B --> H["constants.py"]
+    C --> H
+    D --> H
+    E --> H
 ```

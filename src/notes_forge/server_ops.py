@@ -62,6 +62,7 @@ def make_memory_handler(
     hide_toc: bool = False,
     enable_search: bool = False,
     enable_download: bool = False,
+    enable_theme: bool = False,
     footer_text: str = "",
 ):
     md_root = md_root.resolve()
@@ -117,6 +118,7 @@ def make_memory_handler(
                     hide_toc=hide_toc,
                     enable_search=enable_search,
                     enable_download=enable_download,
+                    enable_theme=enable_theme,
                     footer_text=footer_text,
                     serve_mode=True,
                 ).encode("utf-8")
@@ -159,6 +161,7 @@ def make_memory_handler(
                         hide_toc=hide_toc,
                         enable_search=enable_search,
                         enable_download=enable_download,
+                        enable_theme=enable_theme,
                         footer_text=footer_text,
                         serve_mode=True,
                     ).encode("utf-8")
@@ -392,6 +395,7 @@ def serve_markdown_dir(
     hide_toc: bool = False,
     enable_search: bool = False,
     enable_download: bool = False,
+    enable_theme: bool = False,
     footer_text: str = "",
 ) -> None:
     md_dir = md_dir.resolve()
@@ -412,6 +416,7 @@ def serve_markdown_dir(
         hide_toc=hide_toc,
         enable_search=enable_search,
         enable_download=enable_download,
+        enable_theme=enable_theme,
         footer_text=footer_text,
     )
     run_server(handler, host, port, auto_open_browser=auto_open_browser)

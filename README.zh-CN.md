@@ -113,6 +113,7 @@ notes-forge build [input_dir] -o [output_dir]
 
 - `--md-from <dir>`：直接服务源目录
 - `--html-from <dir>`：服务已构建静态目录
+- 如果两者都不传，`serve` 默认等价于 `--md-from .`
 
 ```bash
 notes-forge serve --md-from . --port 8080
@@ -125,6 +126,11 @@ notes-forge serve --html-from public --port 8080
 - `-p, --port 8080`
 - `--no-browser`
 - `--http-log-file logs/http-access.log`
+
+补充说明：
+
+- `--hide-tree`、`--hide-toc`、`--enable-search`、`--enable-download`、`--enable-theme`、`--footer` 这类前端界面参数，适用于直接服务源目录或构建静态输出。
+- 在 `serve --html-from <dir>` 模式下，这些参数不会生效，因为前端界面已经在构建阶段确定。
 
 ### clean
 
@@ -150,7 +156,7 @@ notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 notes-forge serve --md-from . --enable-search --enable-download --enable-theme
 
 # 添加固定页脚
-notes-forge serve --md-from . --footer "© 2026 Your Name"
+notes-forge serve --md-from . --footer "© Your Name"
 ```
 
 ## 部署

@@ -113,6 +113,7 @@ Choose one of the following modes:
 
 - `--md-from <dir>`: serve the source directory directly
 - `--html-from <dir>`: serve prebuilt static output directory
+- If neither is provided, `serve` defaults to `--md-from .`
 
 ```bash
 notes-forge serve --md-from . --port 8080
@@ -125,6 +126,11 @@ Common options:
 - `-p, --port 8080`
 - `--no-browser`
 - `--http-log-file logs/http-access.log`
+
+Notes:
+
+- UI-related options such as `--hide-tree`, `--hide-toc`, `--enable-search`, `--enable-download`, `--enable-theme`, and `--footer` apply when serving from source or when building static output.
+- In `serve --html-from <dir>` mode, those UI options are ignored because the frontend has already been built.
 
 ### clean
 
@@ -150,7 +156,7 @@ notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 notes-forge serve --md-from . --enable-search --enable-download --enable-theme
 
 # Add fixed footer
-notes-forge serve --md-from . --footer "© 2026 Your Name"
+notes-forge serve --md-from . --footer "© Your Name"
 ```
 
 ## Deployment

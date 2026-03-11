@@ -29,7 +29,8 @@ jobs:
 
       - name: Build static site
         run: |
-          python -m notes_forge.cli_app build . -o public
+          pip install -e .
+          notes-forge build . -o public
           touch public/.nojekyll
         env:
           PYTHONPATH: src

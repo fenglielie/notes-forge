@@ -801,6 +801,17 @@ img {
     overflow-wrap: anywhere;
 }
 
+.page-footer a {
+    color: inherit;
+    text-decoration-color: rgba(87, 96, 106, 0.5);
+}
+
+.page-footer a:hover,
+.page-footer a:focus-visible {
+    color: #24292e;
+    text-decoration-color: rgba(36, 41, 46, 0.8);
+}
+
 @media (max-width: 900px) {
     .sidebar {
         width: 240px;
@@ -1239,6 +1250,16 @@ body.dark .sidebar-action-btn:hover {
 body.dark .page-footer {
     border-color: #30363d;
     color: #8b949e;
+}
+
+body.dark .page-footer a {
+    text-decoration-color: rgba(139, 148, 158, 0.55);
+}
+
+body.dark .page-footer a:hover,
+body.dark .page-footer a:focus-visible {
+    color: #c9d1d9;
+    text-decoration-color: rgba(201, 209, 217, 0.8);
 }
 
 body.dark .empty-hint,

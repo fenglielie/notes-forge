@@ -1,6 +1,7 @@
 """Shared constants for notes_forge."""
 
 import errno as errno_codes
+from datetime import datetime
 
 DEFAULT_OUTPUT_DIR = "public"
 DEFAULT_PORT = 8080
@@ -23,7 +24,11 @@ DEFAULT_HIDE_TREE = False
 DEFAULT_HIDE_TOC = False
 DEFAULT_ENABLE_SEARCH = False
 DEFAULT_ENABLE_DOWNLOAD = False
-DEFAULT_FOOTER_TEXT = "Notes Forge"
+DEFAULT_FOOTER_TEXT = (
+    f"© {datetime.now().year} Notes Forge · "
+    "[GitHub](https://github.com/fenglielie/notes-forge) · "
+    "[Docs](https://fenglielie.github.io/notes-forge/)"
+)
 PORT_FALLBACK_TRIES = 50
 PORT_IN_USE_ERRNOS = {
     errno_codes.EADDRINUSE,

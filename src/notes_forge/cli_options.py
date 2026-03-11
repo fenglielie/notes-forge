@@ -84,7 +84,7 @@ def add_footer_argument(
         "--footer",
         type=str,
         default=default,
-        help="Fixed footer text shown at the bottom of the page.",
+        help="Fixed footer text shown at the bottom of the page. URLs are auto-linked.",
     )
 
 

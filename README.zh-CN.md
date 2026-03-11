@@ -5,6 +5,9 @@
 `notes-forge` 是一个零配置、开箱即用的笔记静态站点工具。
 目标是让你在本地目录里直接运行命令，就能浏览和分享 Markdown/PDF/Jupyter Notebook 内容，也可以部署到静态托管。
 
+- 源码仓库：https://github.com/fenglielie/notes-forge
+- 在线文档：https://fenglielie.github.io/notes-forge/
+
 ## 适用场景
 
 - 你有一堆分散在目录中的 `.md` / `.pdf` / `.ipynb` 文件，想快速统一浏览。
@@ -148,6 +151,9 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
     - 可选：使用 `--copy-all-files` 复制全部非隐藏文件
 - 页面渲染发生在浏览器端：前端按 `tree.json` 找到并加载原始文件进行展示。
 - 因此部署方式很简单：把 `public` 整个目录原样上传到任意静态文件服务器即可。
+- 这个仓库本身的文档也可以直接用 `notes-forge` 部署到 GitHub Pages：
+  - 仓库地址：https://github.com/fenglielie/notes-forge
+  - 在线页面：https://fenglielie.github.io/notes-forge/
 
 ## 注意事项
 

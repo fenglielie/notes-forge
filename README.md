@@ -5,6 +5,9 @@ English | [简体中文](./README.zh-CN.md)
 `notes-forge` is a zero-config, out-of-the-box static notes site tool.
 Its goal is simple: run one command in your local folder to browse and share Markdown/PDF/Jupyter Notebook content, and optionally deploy it to any static host.
 
+- Source code: https://github.com/fenglielie/notes-forge
+- Live docs: https://fenglielie.github.io/notes-forge/
+
 ## Use Cases
 
 - You have scattered `.md` / `.pdf` / `.ipynb` files and want one unified viewer.
@@ -148,6 +151,9 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
     - Optional: all non-hidden files with `--copy-all-files`
 - Rendering happens in the browser: frontend loads raw files by `tree.json` and renders them.
 - Deployment is simple: upload the whole `public` directory to any static file host.
+- This repository's documentation can itself be deployed with `notes-forge` to GitHub Pages:
+  - Source repo: https://github.com/fenglielie/notes-forge
+  - Online site: https://fenglielie.github.io/notes-forge/
 
 ## Notes
 

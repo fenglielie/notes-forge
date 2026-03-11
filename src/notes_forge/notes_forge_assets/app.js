@@ -288,6 +288,30 @@ function escapeHtml(str) {
     }[s]));
 }
 
+function renderFooterHtml(text) {
+    const source = typeof text === "string" ? text : "";
+    const placeholders = [];
+    const escapedText = escapeHtml(source).replace(
+        /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        (_match, label, url) => {
+            const token = `@@NF_FOOTER_LINK_${placeholders.length}@@`;
+            placeholders.push(
+                `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`,
+            );
+            return token;
+        },
+    );
+    const withBareUrls = escapedText.replace(/https?:\/\/[^\s<]+/g, (url) => (
+        `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+    ));
+    return withBareUrls.replace(/@@NF_FOOTER_LINK_(\d+)@@/g, (_match, indexText) => {
+        const index = Number(indexText);
+        return Number.isInteger(index) && placeholders[index]
+            ? placeholders[index]
+            : "";
+    });
+}
+
 function normalizePath(path) {
     return path.replace(/\\/g, "/");
 }
@@ -1855,7 +1879,7 @@ function applyUiConfig() {
     }
     if (fixedFooter) {
         if (footerText) {
-            fixedFooter.textContent = footerText;
+            fixedFooter.innerHTML = renderFooterHtml(footerText);
             fixedFooter.hidden = false;
         } else {
             fixedFooter.hidden = true;

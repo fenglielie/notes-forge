@@ -26,6 +26,19 @@ DEFAULT_OUTPUT_DIR = "public"
 DEFAULT_PORT = 8080
 DEFAULT_HOST = "127.0.0.1"
 SUPPORTED_CONTENT_FORMATS = ("md", "pdf", "ipynb")
+MARKDOWN_ASSET_SUFFIXES = (
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".bmp",
+    ".ico",
+    ".avif",
+    ".tif",
+    ".tiff",
+)
 DEFAULT_HIDE_TREE = False
 DEFAULT_HIDE_TOC = False
 DEFAULT_ENABLE_SEARCH = False
@@ -188,6 +201,21 @@ def normalize_include_formats(values: list[str] | None) -> set[str]:
                 )
             selected.add(fmt)
     return selected if selected else set(SUPPORTED_CONTENT_FORMATS)
+
+
+def resolve_allowed_copy_suffixes(include_formats: set[str]) -> set[str]:
+    allowed_ext_map = {
+        "md": ".md",
+        "pdf": ".pdf",
+        "ipynb": ".ipynb",
+    }
+    suffixes = {
+        suffix for fmt, suffix in allowed_ext_map.items() if fmt in set(include_formats)
+    }
+    # Markdown commonly references local image assets via relative paths.
+    if "md" in include_formats:
+        suffixes.update(MARKDOWN_ASSET_SUFFIXES)
+    return suffixes
 
 
 def log_notice(message: str) -> None:
@@ -481,6 +509,8 @@ def copy_site_sources(
     src_root: Path,
     dst_root: Path,
     output_dir: Path,
+    include_formats: set[str] | None = None,
+    copy_all_files: bool = False,
     ignored_dirs: list[str] | None = None,
 ) -> int:
     src_root = src_root.resolve()
@@ -488,6 +518,12 @@ def copy_site_sources(
     output_dir = output_dir.resolve()
     ignored_paths, ignored_names = resolve_ignored_dirs(src_root, ignored_dirs)
     excluded_dirs = {output_dir, *ignored_paths}
+    include_formats = (
+        set(SUPPORTED_CONTENT_FORMATS)
+        if include_formats is None
+        else set(include_formats)
+    )
+    allowed_suffixes = resolve_allowed_copy_suffixes(include_formats)
     copied_files = 0
 
     for dirpath, dirnames, filenames in os.walk(src_root):
@@ -514,6 +550,16 @@ def copy_site_sources(
             if filename.startswith("."):
                 continue
             src_file = current_dir / filename
+            if not copy_all_files and src_file.suffix.lower() not in allowed_suffixes:
+                continue
+
+            resolved_src = src_file.resolve()
+            if not _is_within(resolved_src, src_root):
+                logger.warning(
+                    f"Skipped file outside source root via symlink: {src_file}"
+                )
+                continue
+
             rel_file = rel_dir / filename
 
             dst_file = dst_root / rel_file
@@ -549,6 +595,7 @@ def build_site(
     include_formats: set[str] | None = None,
     ignored_dirs: list[str] | None = None,
     *,
+    copy_all_files: bool = False,
     hide_tree: bool = False,
     hide_toc: bool = False,
     enable_search: bool = False,
@@ -568,7 +615,12 @@ def build_site(
     ignored_paths, ignored_names = resolve_ignored_dirs(input_dir, ignored_dirs)
     excluded_dirs = {output_dir, *ignored_paths}
     copied_files = copy_site_sources(
-        input_dir, output_dir, output_dir, ignored_dirs=ignored_dirs
+        input_dir,
+        output_dir,
+        output_dir,
+        include_formats=include_formats,
+        copy_all_files=copy_all_files,
+        ignored_dirs=ignored_dirs,
     )
 
     tree = build_tree(
@@ -685,14 +737,7 @@ def make_memory_handler(
     ignored_paths, ignored_names = resolve_ignored_dirs(md_root, ignored_dirs)
     ignored_paths = {p.resolve() for p in ignored_paths}
 
-    allowed_ext_map = {
-        "md": ".md",
-        "pdf": ".pdf",
-        "ipynb": ".ipynb",
-    }
-    allowed_suffixes = {
-        suffix for fmt, suffix in allowed_ext_map.items() if fmt in set(include_formats)
-    }
+    allowed_suffixes = resolve_allowed_copy_suffixes(set(include_formats))
 
     def _resolve_request_file(req_path: str) -> Path | None:
         rel_raw = req_path.lstrip("/")
@@ -1106,6 +1151,14 @@ def args_parse() -> argparse.Namespace:
         default=DEFAULT_OUTPUT_DIR,
         help=f"Output directory (default: {DEFAULT_OUTPUT_DIR}).",
     )
+    build_parser.add_argument(
+        "--copy-all-files",
+        action="store_true",
+        help=(
+            "Copy all non-hidden files into output directory. "
+            "By default, build only copies files selected by --include."
+        ),
+    )
 
     serve_parser = subparsers.add_parser(
         "serve",
@@ -1198,6 +1251,10 @@ def main() -> None:
             log_notice(f"Include formats  : {', '.join(sorted(include_formats))}")
             if args.ignore_dir:
                 log_notice(f"Ignore dirs      : {', '.join(args.ignore_dir)}")
+            if args.copy_all_files:
+                log_notice("Copy mode        : copy all non-hidden files")
+            else:
+                log_notice("Copy mode        : copy files selected by --include only")
             if args.hide_tree:
                 log_notice("UI option        : hide file tree")
             if args.hide_toc:
@@ -1216,6 +1273,7 @@ def main() -> None:
                 output_dir,
                 include_formats=include_formats,
                 ignored_dirs=args.ignore_dir,
+                copy_all_files=args.copy_all_files,
                 hide_tree=args.hide_tree,
                 hide_toc=args.hide_toc,
                 enable_search=args.enable_search,

@@ -308,9 +308,19 @@ function resolveAssetPath(mdPath, assetRelativePath) {
     return full.pathname.replace(/^\/+/, "");
 }
 
+function resolveRelativeTarget(mdPath, relativeHref) {
+    const baseDir = dirname(mdPath);
+    const full = new URL(relativeHref, window.location.origin + "/" + (baseDir ? baseDir + "/" : ""));
+    return {
+        path: full.pathname.replace(/^\/+/, ""),
+        search: full.search || "",
+        hash: full.hash || "",
+    };
+}
+
 function inferFileFormat(path, hint = "") {
     if (hint === "md" || hint === "pdf" || hint === "ipynb") return hint;
-    const lower = normalizePath(path).toLowerCase();
+    const lower = normalizePath(path).toLowerCase().split(/[?#]/, 1)[0];
     if (lower.endsWith(".pdf")) return "pdf";
     if (lower.endsWith(".ipynb")) return "ipynb";
     return "md";
@@ -1242,17 +1252,20 @@ function rewriteRelativeLinks(container, mdPath) {
     container.querySelectorAll("a").forEach(a => {
         const href = a.getAttribute("href");
         if (!href || /^(https?:|mailto:|#|\/)/i.test(href)) return;
+        const target = resolveRelativeTarget(mdPath, href);
+        const fileFormat = inferFileFormat(target.path);
+        const isDocLink = /(?:\.md|\.pdf|\.ipynb)$/i.test(target.path);
 
-        if (href.toLowerCase().endsWith(".md")) {
-            const targetPath = resolveAssetPath(mdPath, href);
-            a.href = "#" + targetPath;
-            a.addEventListener("click", function (e) {
-                e.preventDefault();
-                loadDocument(targetPath, "md");
-            });
-        } else {
-            a.href = resolveAssetPath(mdPath, href);
+        if (!isDocLink) {
+            a.href = `${target.path}${target.search}${target.hash}`;
+            return;
         }
+
+        a.href = "#" + target.path;
+        a.addEventListener("click", function (e) {
+            e.preventDefault();
+            loadDocument(target.path, fileFormat);
+        });
     });
 }
 

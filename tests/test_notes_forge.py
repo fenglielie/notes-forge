@@ -60,6 +60,12 @@ class TestNotesForgePortFallback(unittest.TestCase):
         self.assertIn('"enableDownload": true', html)
         self.assertIn('"footerText": "footer line"', html)
 
+    def test_render_index_html_uses_default_footer_text(self):
+        html = notes_forge.render_index_html(
+            footer_text=notes_forge.DEFAULT_FOOTER_TEXT,
+        )
+        self.assertIn('"footerText": "Notes Forge"', html)
+
     def test_is_port_in_use_error_by_errno(self):
         exc = OSError(98, "Address already in use")
         self.assertTrue(notes_forge._is_port_in_use_error(exc))

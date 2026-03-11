@@ -349,6 +349,29 @@ code {
     font-size: 85%;
 }
 
+#viewer :not(pre)>code {
+    display: inline-block;
+    padding: 0.08em 0.34em;
+    border-radius: 4px;
+    border: 0;
+    background: #f1f4f8;
+    color: #334155;
+    font-size: 0.9em;
+    font-weight: 400;
+    line-height: 1.2;
+}
+
+#viewer pre code {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+}
+
 blockquote {
     padding: 0 1em;
     color: #6a737d;
@@ -1336,6 +1359,11 @@ body.dark .search-result-snippet mark {
 body.dark .notebook-cell {
     background: #161b22;
     border-color: #30363d;
+}
+
+body.dark #viewer :not(pre)>code {
+    background: #1b2430;
+    color: #cbd5e1;
 }
 
 body.dark .nb-cell-label {

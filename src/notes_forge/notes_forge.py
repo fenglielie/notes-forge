@@ -43,7 +43,7 @@ DEFAULT_HIDE_TREE = False
 DEFAULT_HIDE_TOC = False
 DEFAULT_ENABLE_SEARCH = False
 DEFAULT_ENABLE_DOWNLOAD = False
-DEFAULT_FOOTER_TEXT = ""
+DEFAULT_FOOTER_TEXT = "Notes Forge"
 PORT_FALLBACK_TRIES = 50
 PORT_IN_USE_ERRNOS = {
     errno_codes.EADDRINUSE,
@@ -1263,7 +1263,7 @@ def main() -> None:
                 log_notice("UI option        : enable search")
             if args.enable_download:
                 log_notice("UI option        : enable download button")
-            if args.footer:
+            if args.footer != DEFAULT_FOOTER_TEXT:
                 log_notice(f"UI footer        : {args.footer}")
             logger.debug(
                 f"Root excludes    : {', '.join(sorted(ROOT_EXCLUDED_BUILD_DIRS))}"
@@ -1315,7 +1315,7 @@ def main() -> None:
                     logger.warning(
                         "--enable-download is ignored in --html-from mode (UI is prebuilt)."
                     )
-                if args.footer:
+                if args.footer != DEFAULT_FOOTER_TEXT:
                     logger.warning(
                         "--footer is ignored in --html-from mode (UI is prebuilt)."
                     )
@@ -1344,7 +1344,7 @@ def main() -> None:
                 log_notice("UI option        : enable search")
             if args.enable_download:
                 log_notice("UI option        : enable download button")
-            if args.footer:
+            if args.footer != DEFAULT_FOOTER_TEXT:
                 log_notice(f"UI footer        : {args.footer}")
             logger.debug(
                 "tree.json        : generated on-the-fly (not written to disk)"

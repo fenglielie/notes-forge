@@ -30,7 +30,7 @@ jobs:
       - name: Build static site
         run: |
           pip install -e .
-          notes-forge build . -o public
+          notes-forge build . -o public --enable-theme --enable-search
           touch public/.nojekyll
         env:
           PYTHONPATH: src

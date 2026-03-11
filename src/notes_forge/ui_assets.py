@@ -26,6 +26,26 @@ def read_asset_text(filename: str) -> str:
     )
 
 
+def read_asset_bytes(filename: str) -> bytes:
+    try:
+        return (
+            importlib_resources.files("notes_forge")
+            .joinpath("notes_forge_assets", filename)
+            .read_bytes()
+        )
+    except (FileNotFoundError, ModuleNotFoundError):
+        pass
+
+    asset_path = Path(__file__).resolve().with_name("notes_forge_assets") / filename
+    if asset_path.is_file():
+        return asset_path.read_bytes()
+
+    raise FileNotFoundError(
+        f"Missing asset file: {filename}; "
+        f"searched package data notes_forge/notes_forge_assets and fallback path {asset_path}"
+    )
+
+
 HEAD_SNIPPET = read_asset_text("head.html")
 STYLE_CSS = read_asset_text("style.css")
 BODY_HTML = read_asset_text("body.html")

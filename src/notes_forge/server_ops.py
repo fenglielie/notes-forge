@@ -28,7 +28,7 @@ from notes_forge.fs_tree import (
     resolve_ignored_dirs,
 )
 from notes_forge.runtime_logging import _emit_http_access_log, log_notice, log_ok
-from notes_forge.ui_assets import render_index_html
+from notes_forge.ui_assets import read_asset_bytes, render_index_html
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +140,10 @@ def make_memory_handler(
                 data = json.dumps(tree, ensure_ascii=False, indent=2).encode("utf-8")
                 _send_bytes(self, data, "application/json; charset=utf-8")
                 return
+            if req_path == "/favicon.ico":
+                data = read_asset_bytes("favicon.ico")
+                _send_bytes(self, data, "image/x-icon")
+                return
             target = _resolve_request_file(req_path)
             if target is None or not _is_allowed_request_file(target):
                 self.send_error(404, "Not Found")
@@ -182,6 +186,10 @@ def make_memory_handler(
                     json.dumps(tree, ensure_ascii=False, indent=2).encode("utf-8")
                 )
                 _send_headers_only(self, data_len, "application/json; charset=utf-8")
+                return
+            if req_path == "/favicon.ico":
+                data_len = len(read_asset_bytes("favicon.ico"))
+                _send_headers_only(self, data_len, "image/x-icon")
                 return
             target = _resolve_request_file(req_path)
             if target is None or not _is_allowed_request_file(target):

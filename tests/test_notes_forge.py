@@ -74,7 +74,7 @@ class TestNotesForgePortFallback(unittest.TestCase):
         busy = OSError(98, "Address already in use")
         fake_server = MagicMock()
 
-        with patch("notes_forge.notes_forge.NotesForgeThreadingHTTPServer", side_effect=[busy, fake_server]) as mocked:
+        with patch("notes_forge.server_ops.NotesForgeThreadingHTTPServer", side_effect=[busy, fake_server]) as mocked:
             server, port, fallback_count = notes_forge._bind_server_with_fallback(
                 handler=object(),
                 host="127.0.0.1",
@@ -89,7 +89,7 @@ class TestNotesForgePortFallback(unittest.TestCase):
 
     def test_bind_server_with_fallback_non_port_error_passthrough(self):
         denied = OSError(13, "Permission denied")
-        with patch("notes_forge.notes_forge.NotesForgeThreadingHTTPServer", side_effect=denied):
+        with patch("notes_forge.server_ops.NotesForgeThreadingHTTPServer", side_effect=denied):
             with self.assertRaises(OSError) as ctx:
                 notes_forge._bind_server_with_fallback(
                     handler=object(),
@@ -101,7 +101,7 @@ class TestNotesForgePortFallback(unittest.TestCase):
 
     def test_bind_server_with_fallback_retries_exhausted(self):
         busy = OSError(98, "Address already in use")
-        with patch("notes_forge.notes_forge.NotesForgeThreadingHTTPServer", side_effect=[busy, busy, busy]):
+        with patch("notes_forge.server_ops.NotesForgeThreadingHTTPServer", side_effect=[busy, busy, busy]):
             with self.assertRaises(OSError) as ctx:
                 notes_forge._bind_server_with_fallback(
                     handler=object(),
@@ -117,11 +117,11 @@ class TestNotesForgePortFallback(unittest.TestCase):
         fake_server.serve_forever.side_effect = KeyboardInterrupt
 
         with (
-            patch("notes_forge.notes_forge._bind_server_with_fallback", return_value=(fake_server, 8081, 1)),
-            patch("notes_forge.notes_forge.log_notice") as mock_notice,
-            patch("notes_forge.notes_forge.log_ok"),
-            patch("notes_forge.notes_forge.socket.gethostbyname", return_value="127.0.0.1"),
-            patch("notes_forge.notes_forge.webbrowser.open", return_value=False),
+            patch("notes_forge.server_ops._bind_server_with_fallback", return_value=(fake_server, 8081, 1)),
+            patch("notes_forge.server_ops.log_notice") as mock_notice,
+            patch("notes_forge.server_ops.log_ok"),
+            patch("notes_forge.server_ops.socket.gethostbyname", return_value="127.0.0.1"),
+            patch("notes_forge.server_ops.webbrowser.open", return_value=False),
         ):
             notes_forge.run_server(handler=object(), host="0.0.0.0", port=8080)
 
@@ -139,10 +139,10 @@ class TestNotesForgePortFallback(unittest.TestCase):
         fake_server.serve_forever.side_effect = KeyboardInterrupt
 
         with (
-            patch("notes_forge.notes_forge._bind_server_with_fallback", return_value=(fake_server, 9090, 0)),
-            patch("notes_forge.notes_forge.log_notice") as mock_notice,
-            patch("notes_forge.notes_forge.log_ok"),
-            patch("notes_forge.notes_forge.webbrowser.open", return_value=False),
+            patch("notes_forge.server_ops._bind_server_with_fallback", return_value=(fake_server, 9090, 0)),
+            patch("notes_forge.server_ops.log_notice") as mock_notice,
+            patch("notes_forge.server_ops.log_ok"),
+            patch("notes_forge.server_ops.webbrowser.open", return_value=False),
         ):
             notes_forge.run_server(handler=object(), host="::", port=9090)
 
@@ -173,7 +173,7 @@ class TestNotesForgePortFallback(unittest.TestCase):
                 raise TypeError("unexpected keyword argument 'onexc'")
             return None
 
-        with patch("notes_forge.notes_forge.shutil.rmtree", side_effect=fake_rmtree) as mock_rm:
+        with patch("notes_forge.build_ops.shutil.rmtree", side_effect=fake_rmtree) as mock_rm:
             notes_forge.safe_rmtree(test_path)
 
         self.assertEqual(mock_rm.call_count, 2)
@@ -183,11 +183,11 @@ class TestNotesForgePortFallback(unittest.TestCase):
         fake_server.serve_forever.side_effect = KeyboardInterrupt
 
         with (
-            patch("notes_forge.notes_forge._bind_server_with_fallback", return_value=(fake_server, 8080, 0)),
-            patch("notes_forge.notes_forge.log_notice"),
-            patch("notes_forge.notes_forge.log_ok"),
-            patch("notes_forge.notes_forge.socket.gethostbyname", return_value="127.0.0.1"),
-            patch("notes_forge.notes_forge.webbrowser.open", return_value=True) as mock_open,
+            patch("notes_forge.server_ops._bind_server_with_fallback", return_value=(fake_server, 8080, 0)),
+            patch("notes_forge.server_ops.log_notice"),
+            patch("notes_forge.server_ops.log_ok"),
+            patch("notes_forge.server_ops.socket.gethostbyname", return_value="127.0.0.1"),
+            patch("notes_forge.server_ops.webbrowser.open", return_value=True) as mock_open,
         ):
             notes_forge.run_server(handler=object(), host="0.0.0.0", port=8080)
 
@@ -198,10 +198,10 @@ class TestNotesForgePortFallback(unittest.TestCase):
         fake_server.serve_forever.side_effect = KeyboardInterrupt
 
         with (
-            patch("notes_forge.notes_forge._bind_server_with_fallback", return_value=(fake_server, 8080, 0)),
-            patch("notes_forge.notes_forge.log_notice"),
-            patch("notes_forge.notes_forge.log_ok"),
-            patch("notes_forge.notes_forge.webbrowser.open", return_value=True) as mock_open,
+            patch("notes_forge.server_ops._bind_server_with_fallback", return_value=(fake_server, 8080, 0)),
+            patch("notes_forge.server_ops.log_notice"),
+            patch("notes_forge.server_ops.log_ok"),
+            patch("notes_forge.server_ops.webbrowser.open", return_value=True) as mock_open,
         ):
             notes_forge.run_server(
                 handler=object(),
@@ -214,10 +214,10 @@ class TestNotesForgePortFallback(unittest.TestCase):
 
     def test_try_open_browser_linux_no_gui_shows_ssh_hint(self):
         with (
-            patch("notes_forge.notes_forge.webbrowser.open", return_value=False) as mock_open,
-            patch("notes_forge.notes_forge.log_notice") as mock_notice,
-            patch("notes_forge.notes_forge.sys.platform", "linux"),
-            patch.dict("notes_forge.notes_forge.os.environ", {}, clear=True),
+            patch("notes_forge.server_ops.webbrowser.open", return_value=False) as mock_open,
+            patch("notes_forge.server_ops.log_notice") as mock_notice,
+            patch("notes_forge.server_ops.sys.platform", "linux"),
+            patch.dict("notes_forge.server_ops.os.environ", {}, clear=True),
         ):
             notes_forge._try_open_browser("http://127.0.0.1:8080", 8080)
 

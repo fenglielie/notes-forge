@@ -37,7 +37,7 @@ Its goal is simple: run one command in your local folder to browse and share Mar
 
 ## Installation
 
-After publishing, the command name is `notes-forge`.
+The command name is `notes-forge`. Install with `uv`:
 
 ```bash
 uv tool install git+https://github.com/fenglielie/notes-forge.git@main
@@ -72,7 +72,7 @@ notes-forge serve --html-from public -p 8080
 
 ## Commands
 
-### 1) build
+### build
 
 Generate a deployable output (not pre-rendered per-file HTML pages).
 
@@ -91,7 +91,7 @@ Common options:
 - `--enable-download`
 - `--footer "your footer text"`
 
-### 2) serve
+### serve
 
 Choose one mode:
 
@@ -110,7 +110,7 @@ Common options:
 - `--no-browser`
 - `--http-log-file logs/http-access.log`
 
-### 3) clean
+### clean
 
 Remove generated output directory:
 
@@ -155,3 +155,34 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
 - Default host is `127.0.0.1`; for LAN access, set `--host 0.0.0.0` explicitly.
 - In `serve --md-from` mode, server-side access is restricted to allowed content types. When `--include` contains `md`, common local Markdown image assets are also allowed.
 - Relative document links (`.md/.pdf/.ipynb`) in Markdown are intercepted and loaded in-app. External links (`http/https/mailto`) keep default browser behavior.
+
+## Architecture
+
+Module split (internal):
+
+- `notes_forge/notes_forge.py`: stable public entry/facade and CLI entrypoint target.
+- `notes_forge/cli_app.py`: command parsing and top-level command orchestration.
+- `notes_forge/cli_options.py`: reusable argparse option builders and include normalization.
+- `notes_forge/build_ops.py`: `build` and `clean` operations, file copy policy, safe cleanup.
+- `notes_forge/server_ops.py`: in-memory/static HTTP serving, handler security checks, port fallback.
+- `notes_forge/fs_tree.py`: tree scan, ignore resolution, path inclusion/exclusion helpers.
+- `notes_forge/ui_assets.py`: bundled asset loading and `index.html` rendering.
+- `notes_forge/runtime_logging.py`: user-facing logs and optional HTTP access logger.
+- `notes_forge/constants.py`: shared constants/defaults.
+
+```mermaid
+flowchart TD
+    A["notes_forge.py (entry)"] --> B["cli_app.py"]
+    B --> C["cli_options.py"]
+    B --> D["build_ops.py"]
+    B --> E["server_ops.py"]
+    D --> F["fs_tree.py"]
+    D --> G["ui_assets.py"]
+    E --> F
+    E --> G
+    B --> H["runtime_logging.py"]
+    C --> I["constants.py"]
+    D --> I
+    E --> I
+    F --> I
+```

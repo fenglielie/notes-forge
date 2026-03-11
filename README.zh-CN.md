@@ -37,7 +37,7 @@
 
 ## 安装
 
-独立发布后，命令名为 `notes-forge`。
+命令名为 `notes-forge`，可以通过 `uv` 安装：
 
 ```bash
 uv tool install git+https://github.com/fenglielie/notes-forge.git@main
@@ -72,7 +72,7 @@ notes-forge serve --html-from public -p 8080
 
 ## 命令说明
 
-### 1) build
+### build
 
 生成可部署目录（不是逐篇预渲染 HTML）。
 
@@ -91,7 +91,7 @@ notes-forge build [input_dir] -o [output_dir]
 - `--enable-download`
 - `--footer "你的页脚文案"`
 
-### 2) serve
+### serve
 
 服务模式二选一：
 
@@ -110,7 +110,7 @@ notes-forge serve --html-from public --port 8080
 - `--no-browser`
 - `--http-log-file logs/http-access.log`
 
-### 3) clean
+### clean
 
 清理构建输出目录：
 
@@ -155,3 +155,34 @@ notes-forge serve --md-from . --footer "© 2026 Your Name"
 - 默认 `host=127.0.0.1`，如果要局域网访问请显式指定 `--host 0.0.0.0`。
 - 在 `serve --md-from` 模式下，服务端会限制可访问内容文件类型；当 `--include` 包含 `md` 时，也允许访问 Markdown 引用的常见本地图片资源。
 - Markdown 中的相对文档链接（`.md/.pdf/.ipynb`）会由前端拦截并在应用内加载；外部链接（`http/https/mailto`）保持默认行为。
+
+## 模块划分
+
+内部模块拆分如下：
+
+- `notes_forge/notes_forge.py`：稳定的公开入口/兼容门面，以及 CLI 入口目标。
+- `notes_forge/cli_app.py`：命令解析与顶层命令调度。
+- `notes_forge/cli_options.py`：可复用的 argparse 参数定义与 `--include` 归一化。
+- `notes_forge/build_ops.py`：`build`/`clean` 相关逻辑、复制策略与安全清理。
+- `notes_forge/server_ops.py`：内存/静态服务、请求安全校验、端口回退。
+- `notes_forge/fs_tree.py`：目录树扫描、忽略规则解析、路径过滤工具。
+- `notes_forge/ui_assets.py`：前端资源读取与 `index.html` 渲染。
+- `notes_forge/runtime_logging.py`：运行日志与可选 HTTP 访问日志。
+- `notes_forge/constants.py`：共享常量与默认值。
+
+```mermaid
+flowchart TD
+    A["notes_forge.py（入口）"] --> B["cli_app.py"]
+    B --> C["cli_options.py"]
+    B --> D["build_ops.py"]
+    B --> E["server_ops.py"]
+    D --> F["fs_tree.py"]
+    D --> G["ui_assets.py"]
+    E --> F
+    E --> G
+    B --> H["runtime_logging.py"]
+    C --> I["constants.py"]
+    D --> I
+    E --> I
+    F --> I
+```

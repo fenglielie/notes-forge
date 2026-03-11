@@ -11,8 +11,6 @@ const rightResizer = document.getElementById("rightResizer");
 const backdrop = document.getElementById("mobileBackdrop");
 const openTreeBtn = document.getElementById("openTreeBtn");
 const openTocBtn = document.getElementById("openTocBtn");
-const openTreeDesktopBtn = document.getElementById("openTreeDesktopBtn");
-const openTocDesktopBtn = document.getElementById("openTocDesktopBtn");
 const closeTreeBtn = document.getElementById("closeTreeBtn");
 const closeTocBtn = document.getElementById("closeTocBtn");
 const collapseTreeBtn = document.getElementById("collapseTreeBtn");
@@ -23,6 +21,7 @@ const themeToggleBtn = document.getElementById("themeToggleBtn");
 const searchOverlay = document.getElementById("searchOverlay");
 const searchInput = document.getElementById("searchInput");
 const searchResults = document.getElementById("searchResults");
+const fabStack = document.querySelector(".fab-stack");
 const backendStatusBanner = document.getElementById("backendStatusBanner");
 const backendStatusText = document.getElementById("backendStatusText");
 const backendRetryBtn = document.getElementById("backendRetryBtn");
@@ -43,7 +42,7 @@ const footerText = typeof runtimeConfig.footerText === "string"
     : "";
 
 let currentFilePath = null;
-const mobileMedia = window.matchMedia("(max-width: 900px)");
+const mobileMedia = window.matchMedia("(max-width: 1375px)");
 const STORAGE_KEY = "md-browser-reading-state";
 const THEME_KEY = "md-browser-theme";
 const LAYOUT_KEY = "md-browser-desktop-layout";
@@ -52,8 +51,20 @@ const MIN_LEFT_SIDEBAR = 220;
 const MAX_LEFT_SIDEBAR = 560;
 const MIN_RIGHT_SIDEBAR = 220;
 const MAX_RIGHT_SIDEBAR = 520;
-const DESKTOP_DOCKED_CONTENT_MIN = 960;
+const DESKTOP_CONTENT_MIN = 880;
+const DESKTOP_CONTENT_MAX = 1120;
+const DESKTOP_PDF_CONTENT_MAX = 1300;
+const DESKTOP_PANEL_GAP = 16;
+const DESKTOP_EDGE_PADDING = 0;
 const DESKTOP_RESIZER_SIZE = 18;
+const SIDEBAR_COLLAPSE_DRAG = 44;
+const LEFT_SIDEBAR_AUTO_FIT_BUFFER = 8;
+const RIGHT_SIDEBAR_AUTO_FIT_BUFFER = 14;
+const LEFT_SIDEBAR_AUTO_FIT_MAX = 340;
+const RIGHT_SIDEBAR_AUTO_FIT_MAX = 320;
+const FAB_INSIDE_GUTTER = 18;
+const FAB_OUTSIDE_GUTTER = 12;
+const FAB_OUTSIDE_MIN_SPACE = 76;
 let scrollSaveTimer = null;
 let hljsReadyPromise = null;
 let currentPdfBlobUrl = null;
@@ -68,6 +79,10 @@ let currentTreeData = [];
 let searchableFiles = [];
 const searchContentCache = new Map();
 let searchIndexBuildPromise = null;
+let leftSidebarAutoWidth = true;
+let rightSidebarAutoWidth = true;
+let leftAutoFitFrame = 0;
+let rightAutoFitFrame = 0;
 const HLJS_VERSION = "11.8.0";
 const REQUIRED_HLJS_LANGS = [
     { name: "c", url: `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HLJS_VERSION}/build/languages/c.min.js` },
@@ -1011,27 +1026,35 @@ function getSidebarWidthVar(propertyName, min, max) {
 }
 
 function isDockedDesktop() {
-    return !isMobile() && appEl.classList.contains("desktop-docked");
+    return !isMobile() && appEl.classList.contains("layout-docked");
 }
 
 function isSidebarOverlayMode() {
-    return isMobile() || appEl.classList.contains("desktop-overlay");
+    return !isDockedDesktop();
 }
 
-function canUseDockedDesktop() {
-    if (isMobile()) return false;
-    const slotWidth = computeDesktopSideSlot();
-    return window.innerWidth >= DESKTOP_DOCKED_CONTENT_MIN + (slotWidth * 2);
+function getLayoutMode() {
+    return isMobile() ? "mobile" : "docked";
 }
 
-function computeDesktopSideSlot() {
-    const leftWidth = hideTreeUi || appEl.classList.contains("left-collapsed")
-        ? 0
-        : getSidebarWidthVar("--left-sidebar-width", MIN_LEFT_SIDEBAR, MAX_LEFT_SIDEBAR);
-    const rightWidth = hideTocUi || appEl.classList.contains("right-collapsed")
-        ? 0
-        : getSidebarWidthVar("--right-sidebar-width", MIN_RIGHT_SIDEBAR, MAX_RIGHT_SIDEBAR);
-    return Math.max(leftWidth, rightWidth);
+function getPreferredContentWidth() {
+    return contentEl.classList.contains("pdf-content-mode")
+        ? DESKTOP_PDF_CONTENT_MAX
+        : DESKTOP_CONTENT_MAX;
+}
+
+function getDockedContentWidth() {
+    const contentMax = getPreferredContentWidth();
+    const minimumSideWidth = Math.max(MIN_LEFT_SIDEBAR, MIN_RIGHT_SIDEBAR);
+    const available = window.innerWidth - (2 * (minimumSideWidth + DESKTOP_PANEL_GAP + DESKTOP_EDGE_PADDING));
+    return clamp(available, DESKTOP_CONTENT_MIN, contentMax);
+}
+
+function getDockedSidebarMax(side) {
+    const hardMin = side === "left" ? MIN_LEFT_SIDEBAR : MIN_RIGHT_SIDEBAR;
+    const hardMax = side === "left" ? MAX_LEFT_SIDEBAR : MAX_RIGHT_SIDEBAR;
+    const available = Math.floor((window.innerWidth - getDockedContentWidth()) / 2) - DESKTOP_PANEL_GAP - DESKTOP_EDGE_PADDING;
+    return Math.max(hardMin, Math.min(hardMax, available));
 }
 
 function getSidebarBounds(side) {
@@ -1041,10 +1064,8 @@ function getSidebarBounds(side) {
     if (!isDockedDesktop()) {
         return { min: hardMin, max: hardMax };
     }
-    const slotWidth = Math.max(0, computeDesktopSideSlot());
-    const max = Math.min(hardMax, slotWidth);
-    const min = Math.min(hardMin, max);
-    return { min, max };
+    const max = getDockedSidebarMax(side);
+    return { min: hardMin, max };
 }
 
 function setSidebarWidthVars(leftWidth, rightWidth) {
@@ -1126,6 +1147,8 @@ function saveDesktopLayout() {
     const layout = {
         leftCollapsed: appEl.classList.contains("left-collapsed"),
         rightCollapsed: appEl.classList.contains("right-collapsed"),
+        leftAuto: leftSidebarAutoWidth,
+        rightAuto: rightSidebarAutoWidth,
         leftWidth: Number.isFinite(leftWidth) ? Math.round(leftWidth) : undefined,
         rightWidth: Number.isFinite(rightWidth) ? Math.round(rightWidth) : undefined
     };
@@ -1137,22 +1160,143 @@ function applyDesktopLayoutFromStorage() {
         const raw = localStorage.getItem(LAYOUT_KEY);
         if (!raw) return;
         const parsed = JSON.parse(raw);
-        appEl.classList.toggle("left-collapsed", !!parsed.leftCollapsed);
-        appEl.classList.toggle("right-collapsed", !!parsed.rightCollapsed);
+        leftSidebarAutoWidth = parsed.leftAuto !== false;
+        rightSidebarAutoWidth = parsed.rightAuto !== false;
+        appEl.classList.toggle("left-collapsed", hideTreeUi || !!parsed.leftCollapsed);
+        appEl.classList.toggle("right-collapsed", hideTocUi || !!parsed.rightCollapsed);
         setSidebarWidthVars(Number(parsed.leftWidth), Number(parsed.rightWidth));
     } catch {
-        appEl.classList.remove("left-collapsed");
-        appEl.classList.remove("right-collapsed");
+        leftSidebarAutoWidth = true;
+        rightSidebarAutoWidth = true;
+        appEl.classList.toggle("left-collapsed", hideTreeUi);
+        appEl.classList.toggle("right-collapsed", hideTocUi);
     }
 }
 
-function toggleLeftSidebarDesktop() {
+function measurePreferredSidebarWidth(side) {
+    const bounds = getSidebarBounds(side);
+    const selectors = side === "left"
+        ? [".sidebar-header", ".tree-label"]
+        : [".toc-header", ".toc-item", ".empty-hint"];
+    const buffer = side === "left"
+        ? LEFT_SIDEBAR_AUTO_FIT_BUFFER
+        : RIGHT_SIDEBAR_AUTO_FIT_BUFFER;
+    const autoFitMax = side === "left"
+        ? Math.min(bounds.max, LEFT_SIDEBAR_AUTO_FIT_MAX)
+        : Math.min(bounds.max, RIGHT_SIDEBAR_AUTO_FIT_MAX);
+    const root = side === "left" ? sidebar : tocSidebar;
+    if (!root) return bounds.min;
+
+    let maxWidth = 0;
+    selectors.forEach((selector) => {
+        root.querySelectorAll(selector).forEach((el) => {
+            maxWidth = Math.max(maxWidth, el.scrollWidth || 0);
+        });
+    });
+
+    if (!maxWidth) return bounds.min;
+    return clamp(maxWidth + buffer, bounds.min, autoFitMax);
+}
+
+function autoFitSidebarWidth(side) {
+    if (!isDockedDesktop()) return;
+    if ((side === "left" && (hideTreeUi || !leftSidebarAutoWidth))
+        || (side === "right" && (hideTocUi || !rightSidebarAutoWidth))) {
+        return;
+    }
+
+    const nextWidth = measurePreferredSidebarWidth(side);
+    if (side === "left") {
+        setSidebarWidthVars(nextWidth, NaN);
+    } else {
+        setSidebarWidthVars(NaN, nextWidth);
+        syncFabPosition(getDockedContentWidth(), nextWidth);
+    }
+}
+
+function scheduleAutoFitSidebar(side) {
+    if (side === "left") {
+        if (leftAutoFitFrame) cancelAnimationFrame(leftAutoFitFrame);
+        leftAutoFitFrame = requestAnimationFrame(() => {
+            leftAutoFitFrame = 0;
+            autoFitSidebarWidth("left");
+        });
+        return;
+    }
+
+    if (rightAutoFitFrame) cancelAnimationFrame(rightAutoFitFrame);
+    rightAutoFitFrame = requestAnimationFrame(() => {
+        rightAutoFitFrame = 0;
+        autoFitSidebarWidth("right");
+    });
+}
+
+function syncFabPosition(contentWidthOverride = NaN, rightWidthOverride = NaN) {
+    const docked = isDockedDesktop();
+    const contentWidth = Number.isFinite(contentWidthOverride)
+        ? contentWidthOverride
+        : (docked
+            ? getDockedContentWidth()
+            : Math.min(getPreferredContentWidth(), Math.max(320, window.innerWidth - 48)));
+    const { rightWidth } = getSidebarWidths();
+    const effectiveRightWidth = docked && !hideTocUi && !appEl.classList.contains("right-collapsed")
+        ? (Number.isFinite(rightWidthOverride) ? rightWidthOverride : rightWidth)
+        : 0;
+    const outerMargin = Math.max(0, (window.innerWidth - contentWidth) / 2);
+    const whitespaceToRight = Math.max(0, outerMargin - effectiveRightWidth);
+    const fabWidth = fabStack ? Math.max(48, Math.ceil(fabStack.getBoundingClientRect().width || 0)) : 56;
+    const fabRight = docked
+        ? (whitespaceToRight >= Math.max(FAB_OUTSIDE_MIN_SPACE, fabWidth + (2 * FAB_OUTSIDE_GUTTER))
+            ? Math.max(effectiveRightWidth + FAB_OUTSIDE_GUTTER, outerMargin - fabWidth - FAB_OUTSIDE_GUTTER)
+            : outerMargin + FAB_INSIDE_GUTTER)
+        : FAB_INSIDE_GUTTER;
+
+    appEl.style.setProperty("--fab-right", `${Math.round(fabRight)}px`);
+}
+
+function syncPanelToggleButtons() {
+    const overlayMode = isSidebarOverlayMode();
+    const leftVisible = !hideTreeUi;
+    const rightVisible = !hideTocUi;
+    const leftActive = leftVisible && (overlayMode
+        ? sidebar.classList.contains("open")
+        : !appEl.classList.contains("left-collapsed"));
+    const rightActive = rightVisible && (overlayMode
+        ? tocSidebar.classList.contains("open")
+        : !appEl.classList.contains("right-collapsed"));
+
+    if (openTreeBtn) {
+        openTreeBtn.hidden = !leftVisible;
+        openTreeBtn.disabled = !leftVisible;
+        if (leftVisible) {
+            const label = leftActive ? "Hide files" : "Show files";
+            openTreeBtn.title = label;
+            openTreeBtn.setAttribute("aria-label", label);
+            openTreeBtn.setAttribute("aria-pressed", leftActive ? "true" : "false");
+        } else {
+            openTreeBtn.removeAttribute("aria-pressed");
+        }
+    }
+    if (openTocBtn) {
+        openTocBtn.hidden = !rightVisible;
+        openTocBtn.disabled = !rightVisible;
+        if (rightVisible) {
+            const label = rightActive ? "Hide TOC" : "Show TOC";
+            openTocBtn.title = label;
+            openTocBtn.setAttribute("aria-label", label);
+            openTocBtn.setAttribute("aria-pressed", rightActive ? "true" : "false");
+        } else {
+            openTocBtn.removeAttribute("aria-pressed");
+        }
+    }
+}
+
+function toggleLeftSidebar() {
     if (hideTreeUi) return;
-    if (isMobile()) return;
     if (isDockedDesktop()) {
         appEl.classList.toggle("left-collapsed");
         saveDesktopLayout();
-        syncTopActionsOffset();
+        syncPanelToggleButtons();
         return;
     }
     if (sidebar.classList.contains("open")) {
@@ -1162,13 +1306,13 @@ function toggleLeftSidebarDesktop() {
     }
 }
 
-function toggleRightSidebarDesktop() {
+function toggleRightSidebar() {
     if (hideTocUi) return;
-    if (isMobile()) return;
     if (isDockedDesktop()) {
         appEl.classList.toggle("right-collapsed");
         saveDesktopLayout();
-        syncTopActionsOffset();
+        syncFabPosition();
+        syncPanelToggleButtons();
         return;
     }
     if (tocSidebar.classList.contains("open")) {
@@ -1194,11 +1338,12 @@ function bindSidebarResizer(resizerEl, side) {
         const { min: minWidth, max: maxWidth } = getSidebarBounds(side);
         const dx = event.clientX - startX;
         const rawWidth = isLeft ? (startWidth + dx) : (startWidth - dx);
+        const collapseThreshold = minWidth - SIDEBAR_COLLAPSE_DRAG;
+        const contentWidth = getDockedContentWidth();
 
-        if (startedCollapsed && rawWidth <= 0) {
+        if (rawWidth <= collapseThreshold) {
             appEl.classList.add(collapsedClass);
-        } else if (!startedCollapsed && rawWidth < minWidth) {
-            appEl.classList.add(collapsedClass);
+            syncFabPosition(contentWidth, isLeft ? NaN : 0);
         } else {
             const nextWidth = clamp(rawWidth, minWidth, maxWidth);
             appEl.classList.remove(collapsedClass);
@@ -1207,8 +1352,9 @@ function bindSidebarResizer(resizerEl, side) {
             } else {
                 setSidebarWidthVars(NaN, nextWidth);
             }
+            syncFabPosition(contentWidth, isLeft ? NaN : nextWidth);
         }
-        syncTopActionsOffset();
+        syncPanelToggleButtons();
     };
 
     const onUp = () => {
@@ -1217,7 +1363,15 @@ function bindSidebarResizer(resizerEl, side) {
         pointerId = null;
         resizerEl.classList.remove("active");
         document.body.style.userSelect = "";
+        if (!appEl.classList.contains(collapsedClass)) {
+            if (isLeft) {
+                leftSidebarAutoWidth = false;
+            } else {
+                rightSidebarAutoWidth = false;
+            }
+        }
         saveDesktopLayout();
+        syncPanelToggleButtons();
     };
 
     resizerEl.addEventListener("pointerdown", (event) => {
@@ -1252,18 +1406,26 @@ function bindSidebarResizer(resizerEl, side) {
 }
 
 function syncDesktopLayoutMode() {
-    const docked = canUseDockedDesktop();
-    appEl.classList.toggle("desktop-docked", docked);
-    appEl.classList.toggle("desktop-overlay", !docked && !isMobile());
-    appEl.style.setProperty("--desktop-side-slot", docked ? `${computeDesktopSideSlot()}px` : "0px");
+    const mode = getLayoutMode();
+    const docked = mode === "docked";
+    const contentWidth = docked
+        ? getDockedContentWidth()
+        : Math.min(getPreferredContentWidth(), Math.max(320, window.innerWidth - 48));
     const { leftWidth, rightWidth } = getSidebarWidths();
+
+    appEl.classList.toggle("layout-docked", docked);
+    appEl.classList.toggle("layout-mobile", mode === "mobile");
+    appEl.style.setProperty("--content-track-width", `${Math.round(contentWidth)}px`);
+
     setSidebarWidthVars(leftWidth, rightWidth);
-    if (!isSidebarOverlayMode()) {
-        sidebar.classList.remove("open");
-        tocSidebar.classList.remove("open");
-        backdrop.classList.remove("show");
-        document.body.style.overflow = "";
+    if (leftSidebarAutoWidth) scheduleAutoFitSidebar("left");
+    if (rightSidebarAutoWidth) scheduleAutoFitSidebar("right");
+    syncFabPosition(contentWidth, rightWidth);
+
+    if (docked) {
+        closePanels();
     }
+    syncPanelToggleButtons();
 }
 
 function syncTopActionsOffset() {
@@ -1298,7 +1460,7 @@ function closePanels() {
     if (!hideTocUi) tocSidebar.classList.remove("open");
     backdrop.classList.remove("show");
     document.body.style.overflow = "";
-    syncTopActionsOffset();
+    syncPanelToggleButtons();
 }
 
 function openTreePanel() {
@@ -1308,7 +1470,7 @@ function openTreePanel() {
     tocSidebar.classList.remove("open");
     backdrop.classList.add("show");
     document.body.style.overflow = "hidden";
-    syncTopActionsOffset();
+    syncPanelToggleButtons();
 }
 
 function openTocPanel() {
@@ -1318,7 +1480,7 @@ function openTocPanel() {
     sidebar.classList.remove("open");
     backdrop.classList.add("show");
     document.body.style.overflow = "hidden";
-    syncTopActionsOffset();
+    syncPanelToggleButtons();
 }
 
 function rewriteRelativeLinks(container, mdPath) {
@@ -1406,12 +1568,14 @@ function slugify(text) {
 function buildTOC(container) {
     if (hideTocUi) {
         tocContainer.innerHTML = `<div class="empty-hint">TOC hidden</div>`;
+        scheduleAutoFitSidebar("right");
         return;
     }
     const headings = container.querySelectorAll("h1, h2, h3, h4, h5, h6");
 
     if (!headings.length) {
         tocContainer.innerHTML = `<div class="empty-hint">No headings</div>`;
+        scheduleAutoFitSidebar("right");
         return;
     }
 
@@ -1454,6 +1618,7 @@ function buildTOC(container) {
     });
 
     observeHeadings(headings);
+    scheduleAutoFitSidebar("right");
 }
 
 function setActiveTOC(id) {
@@ -1732,6 +1897,7 @@ async function loadNotebookDocument(path) {
     } catch (err) {
         viewer.innerHTML = `<div class="error">Error: ${escapeHtml(err.message)}</div>`;
         tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable</div>`;
+        scheduleAutoFitSidebar("right");
         setMetaHtml(`<div class="article-stats">Load failed</div>`);
         document.title = `Error - ${BASE_TITLE}`;
     }
@@ -1789,6 +1955,7 @@ Possible causes:
 3. Broken relative links in markdown</div>`;
 
         tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable</div>`;
+        scheduleAutoFitSidebar("right");
         setMetaHtml(`<div class="article-stats">Load failed</div>`);
         document.title = `Error - ${BASE_TITLE}`;
     }
@@ -1818,6 +1985,7 @@ async function loadPdfDocument(path) {
         await renderPdfByMode(getDefaultPdfViewMode(), { persistPreference: false });
 
         tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable for PDF</div>`;
+        scheduleAutoFitSidebar("right");
         updatePageTitle(currentFilePath, viewer);
         contentEl.scrollTop = 0;
         const state = getReadingState();
@@ -1831,6 +1999,7 @@ async function loadPdfDocument(path) {
         articleWrapper.classList.remove("pdf-mode");
         viewer.innerHTML = `<div class="error">Error: ${escapeHtml(err.message)}</div>`;
         tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable</div>`;
+        scheduleAutoFitSidebar("right");
         setMetaHtml(`<div class="article-stats">Load failed</div>`);
         document.title = `Error - ${BASE_TITLE}`;
     }
@@ -1867,6 +2036,7 @@ async function loadTree() {
 
         treeContainer.innerHTML = "";
         renderTree(tree, treeContainer);
+        scheduleAutoFitSidebar("left");
 
         const hashPath = decodeURIComponent(location.hash.replace(/^#/, "").trim());
         if (hashPath) {
@@ -1890,6 +2060,7 @@ async function loadTree() {
         }
     } catch (err) {
         treeContainer.innerHTML = `<div class="error">Tree load failed: ${escapeHtml(err.message)}</div>`;
+        scheduleAutoFitSidebar("left");
         document.title = `Error - ${BASE_TITLE}`;
     }
 }
@@ -1926,12 +2097,12 @@ function pickTopLevelDefaultFile(nodes) {
 }
 
 function applyUiConfig() {
-    if (hideTreeUi) {
-        appEl.classList.add("hide-tree", "left-collapsed");
-    }
-    if (hideTocUi) {
-        appEl.classList.add("hide-toc", "right-collapsed");
-    }
+    appEl.classList.toggle("left-collapsed", hideTreeUi || appEl.classList.contains("left-collapsed"));
+    appEl.classList.toggle("right-collapsed", hideTocUi || appEl.classList.contains("right-collapsed"));
+    if (sidebar) sidebar.hidden = hideTreeUi;
+    if (leftResizer) leftResizer.hidden = hideTreeUi;
+    if (tocSidebar) tocSidebar.hidden = hideTocUi;
+    if (rightResizer) rightResizer.hidden = hideTocUi;
     if (fixedFooter) {
         if (footerText) {
             fixedFooter.innerHTML = renderFooterHtml(footerText);
@@ -1941,7 +2112,7 @@ function applyUiConfig() {
         }
     }
     if (openSearchBtn) {
-        openSearchBtn.hidden = !(enableSearchUi && !hideTreeUi);
+        openSearchBtn.hidden = !enableSearchUi;
     }
     if (downloadBtn) {
         downloadBtn.hidden = !enableDownloadUi;
@@ -1949,6 +2120,7 @@ function applyUiConfig() {
     if (themeToggleBtn) {
         themeToggleBtn.hidden = !enableThemeUi;
     }
+    syncPanelToggleButtons();
 }
 
 async function downloadCurrentFile() {
@@ -1972,7 +2144,7 @@ async function downloadCurrentFile() {
 }
 
 function openSearchOverlay() {
-    if (!(enableSearchUi && !hideTreeUi)) return;
+    if (!enableSearchUi) return;
     if (!searchOverlay) return;
     searchOverlay.hidden = false;
     if (searchResults && !searchInput?.value.trim()) {
@@ -2000,7 +2172,7 @@ window.addEventListener("hashchange", () => {
 if (searchInput) {
     let searchTimer = null;
     searchInput.addEventListener("input", () => {
-        if (!(enableSearchUi && !hideTreeUi)) return;
+        if (!enableSearchUi) return;
         if (searchTimer) clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
             performSearch(searchInput.value);
@@ -2033,16 +2205,14 @@ document.addEventListener("keydown", (event) => {
         closeSearchOverlay();
         return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    if (enableSearchUi && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         openSearchOverlay();
     }
 }, true);
 
-openTreeBtn.addEventListener("click", openTreePanel);
-openTocBtn.addEventListener("click", openTocPanel);
-openTreeDesktopBtn.addEventListener("click", toggleLeftSidebarDesktop);
-openTocDesktopBtn.addEventListener("click", toggleRightSidebarDesktop);
+openTreeBtn.addEventListener("click", toggleLeftSidebar);
+openTocBtn.addEventListener("click", toggleRightSidebar);
 collapseTreeBtn.addEventListener("click", collapseAllTreeFolders);
 refreshTreeBtn.addEventListener("click", () => {
     window.location.reload();
@@ -2054,7 +2224,7 @@ closeTreeBtn.addEventListener("click", () => {
     } else {
         appEl.classList.add("left-collapsed");
         saveDesktopLayout();
-        syncTopActionsOffset();
+        syncPanelToggleButtons();
     }
 });
 closeTocBtn.addEventListener("click", () => {
@@ -2064,7 +2234,8 @@ closeTocBtn.addEventListener("click", () => {
     } else {
         appEl.classList.add("right-collapsed");
         saveDesktopLayout();
-        syncTopActionsOffset();
+        syncFabPosition();
+        syncPanelToggleButtons();
     }
 });
 backdrop.addEventListener("click", closePanels);
@@ -2081,8 +2252,6 @@ window.addEventListener("resize", () => {
         // Ignore transient render errors during resize.
     });
 });
-tocSidebar.addEventListener("transitionend", syncTopActionsOffset);
-
 contentEl.addEventListener("scroll", () => {
     if (!currentFilePath) return;
     if (scrollSaveTimer) clearTimeout(scrollSaveTimer);
@@ -2097,9 +2266,9 @@ bindSidebarResizer(leftResizer, "left");
 bindSidebarResizer(rightResizer, "right");
 
 initTheme();
+applyDesktopLayoutFromStorage();
 applyUiConfig();
 closeSearchOverlay();
 resetPageTitle();
-applyDesktopLayoutFromStorage();
 syncTopActionsOffset();
 loadTree();

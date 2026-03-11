@@ -3,55 +3,61 @@
         <span id="backendStatusText">Backend disconnected. Restart serve and refresh.</span>
         <button id="backendRetryBtn" class="backend-status-retry" type="button">Retry</button>
     </div>
-    <div class="mobile-topbar">
-        <button id="openTreeBtn" class="mobile-btn" type="button" title="Files">📚</button>
-        <div id="mobileTitle" class="mobile-title">Document</div>
-        <button id="openTocBtn" class="mobile-btn" type="button" title="TOC">📑</button>
+    <div class="topbar">
+        <div class="topbar-side topbar-side-left">
+            <button id="openTreeBtn" class="topbar-btn" type="button" title="Files">📚</button>
+        </div>
+        <div id="mobileTitle" class="topbar-title">Document</div>
+        <div class="topbar-side topbar-side-right">
+            <button id="openTocBtn" class="topbar-btn" type="button" title="TOC">📑</button>
+        </div>
     </div>
 
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <span>📚 Files</span>
-            <div class="sidebar-actions">
-                <button id="collapseTreeBtn" class="sidebar-action-btn" type="button" title="Collapse all" aria-label="Collapse all">
-                    <svg class="sidebar-action-icon" viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M3 5.5h10M4.5 8l3.5 3.5L11.5 8" />
-                    </svg>
-                </button>
-                <button id="refreshTreeBtn" class="sidebar-action-btn" type="button" title="Refresh page" aria-label="Refresh page">
-                    <svg class="sidebar-action-icon" viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M13 8a5 5 0 1 1-1.46-3.54" />
-                        <path d="M13 3v3h-3" />
-                    </svg>
-                </button>
-                <button id="closeTreeBtn" class="panel-close" type="button" title="Close">✕</button>
+    <div class="workspace">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <span>📚 Files</span>
+                <div class="sidebar-actions">
+                    <button id="collapseTreeBtn" class="sidebar-action-btn" type="button" title="Collapse all" aria-label="Collapse all">
+                        <svg class="sidebar-action-icon" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M3 5.5h10M4.5 8l3.5 3.5L11.5 8" />
+                        </svg>
+                    </button>
+                    <button id="refreshTreeBtn" class="sidebar-action-btn" type="button" title="Refresh page" aria-label="Refresh page">
+                        <svg class="sidebar-action-icon" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M13 8a5 5 0 1 1-1.46-3.54" />
+                            <path d="M13 3v3h-3" />
+                        </svg>
+                    </button>
+                    <button id="closeTreeBtn" class="panel-close" type="button" title="Close">✕</button>
+                </div>
             </div>
-        </div>
-        <div id="tree" class="tree-container">
-            Loading...
-        </div>
-    </aside>
-    <div id="leftResizer" class="pane-resizer left-resizer" aria-hidden="true"></div>
+            <div id="tree" class="tree-container">
+                Loading...
+            </div>
+        </aside>
+        <div id="leftResizer" class="pane-resizer left-resizer" aria-hidden="true"></div>
 
-    <main class="content">
-        <div class="article-wrapper">
-            <div id="viewer" class="empty-hint">Select a document (.md/.pdf).</div>
-        </div>
-        <footer id="fixedFooter" class="page-footer" hidden></footer>
-    </main>
-    <div id="rightResizer" class="pane-resizer right-resizer" aria-hidden="true"></div>
+        <main class="content">
+            <div class="article-wrapper">
+                <div id="viewer" class="empty-hint">Select a document (.md/.pdf).</div>
+            </div>
+            <footer id="fixedFooter" class="page-footer" hidden></footer>
+        </main>
+        <div id="rightResizer" class="pane-resizer right-resizer" aria-hidden="true"></div>
 
-    <aside class="toc-sidebar">
-        <div class="toc-header">
-            <span>📑 TOC</span>
-            <button id="closeTocBtn" class="panel-close" type="button" title="Close">✕</button>
-        </div>
-        <div id="toc" class="toc-container">
-            No headings
-        </div>
-    </aside>
+        <aside class="toc-sidebar">
+            <div class="toc-header">
+                <span>📑 TOC</span>
+                <button id="closeTocBtn" class="panel-close" type="button" title="Close">✕</button>
+            </div>
+            <div id="toc" class="toc-container">
+                No headings
+            </div>
+        </aside>
 
-    <div id="mobileBackdrop" class="mobile-backdrop"></div>
+        <div id="mobileBackdrop" class="mobile-backdrop"></div>
+    </div>
     <div id="searchOverlay" class="search-overlay" hidden>
         <div class="search-panel" role="dialog" aria-modal="true" aria-label="Search markdown files">
             <input id="searchInput" class="search-input" type="search" placeholder="Search in markdown files..."
@@ -62,10 +68,8 @@
         </div>
     </div>
     <div class="fab-stack">
-        <button id="openTreeDesktopBtn" class="fab-btn panel-fab" type="button" title="Files">📚</button>
-        <button id="openTocDesktopBtn" class="fab-btn panel-fab" type="button" title="TOC">📑</button>
-        <button id="openSearchBtn" class="fab-btn" type="button" title="Search">🔎</button>
+        <button id="openSearchBtn" class="fab-btn" type="button" title="Search" hidden>🔎</button>
         <button id="downloadBtn" class="fab-btn" type="button" title="Download" hidden>⬇️</button>
-        <button id="themeToggleBtn" class="fab-btn" type="button" title="Theme">🌙</button>
+        <button id="themeToggleBtn" class="fab-btn" type="button" title="Theme" hidden>🌙</button>
     </div>
 </div>

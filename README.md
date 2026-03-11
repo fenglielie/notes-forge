@@ -1,104 +1,109 @@
 # notes-forge
 
-`notes-forge` 是一个零配置、开箱即用的笔记静态站点工具。
-目标是让你在本地目录里直接运行命令，就能浏览和分享 Markdown/PDF/Jupyter Notebook 内容，也可以部署到静态托管。
+English | [简体中文](./README.zh-CN.md)
 
-## 适用场景
+`notes-forge` is a zero-config, out-of-the-box static notes site tool.
+Its goal is simple: run one command in your local folder to browse and share Markdown/PDF/Jupyter Notebook content, and optionally deploy it to any static host.
 
-- 你有一堆分散在目录中的 `.md` / `.pdf` / `.ipynb` 文件，想快速统一浏览。
-- 你不想维护复杂配置文件、主题系统或构建链路。
-- 你希望支持两种模式：
-  - 直接内存服务（不生成输出目录）
-  - 生成可部署目录（可部署到任意静态托管）
+## Use Cases
 
-## 核心特性
+- You have scattered `.md` / `.pdf` / `.ipynb` files and want one unified viewer.
+- You do not want to maintain a complex config/theme/build pipeline.
+- You want two modes:
+  - In-memory preview mode (no generated site folder)
+  - Static output mode (deployable to any static hosting)
 
-- 零配置默认可用：默认当前目录、默认端口、默认包含全部支持格式。
-- 双模式：
-  - `serve --md-from .`：内存模式，启动快，不落地站点文件。
-  - `build . -o public`：生成静态站点，可部署。
-- 内容树自动扫描：按目录结构生成树。
-- 支持格式过滤：`--include md,pdf,ipynb`。
-- 支持目录忽略：`--ignore-dir`（可重复或逗号分隔）。
-- UI 开关：
+## Key Features
+
+- Zero-config defaults: current directory, default port, all supported formats.
+- Dual modes:
+  - `serve --md-from .`: in-memory mode, fast startup, no output files.
+  - `build . -o public`: generate a deployable static site.
+- Auto tree scan based on folder structure.
+- Format filtering: `--include md,pdf,ipynb`.
+- When `--include` contains `md`, common local Markdown image assets are also preserved (for example `png/jpg/svg/webp`).
+- Relative Markdown links to `.md/.pdf/.ipynb` are handled in-app (no browser default download flow).
+- Directory ignore support: `--ignore-dir` (repeatable or comma-separated).
+- UI toggles:
   - `--hide-tree`
   - `--hide-toc`
   - `--enable-search`
   - `--enable-download`
-  - `--footer "..."`。
-- 服务增强：
-  - 默认仅绑定本机回环地址 `127.0.0.1`
-  - 端口占用自动递增回退
-  - 可选 HTTP 访问日志输出。
+  - `--footer "..."`
+- Service improvements:
+  - Default bind to loopback `127.0.0.1`
+  - Auto port fallback when occupied
+  - Optional HTTP access log output
 
-## 安装
+## Installation
 
-独立发布后，命令名为 `notes-forge`。
+After publishing, the command name is `notes-forge`.
 
 ```bash
 uv tool install git+https://github.com/fenglielie/notes-forge.git@main
 ```
 
-或安装到当前 Python 环境：
+Or install into the current Python environment:
 
 ```bash
 pip install git+https://github.com/fenglielie/notes-forge.git@main
 ```
 
-安装后执行：
+Check installation:
 
 ```bash
 notes-forge --version
 ```
 
-## 快速开始
+## Quick Start
 
-在你的笔记目录中：
+In your notes directory:
 
 ```bash
-# 1) 直接预览（内存模式，不生成 public）
+# 1) Preview directly (in-memory mode, no public output)
 notes-forge serve --md-from .
 
-# 2) 构建静态站点
+# 2) Build static site output
 notes-forge build . -o public
 
-# 3) 预览已构建站点
+# 3) Preview built static site
 notes-forge serve --html-from public -p 8080
 ```
 
-## 命令说明
+## Commands
 
 ### 1) build
 
-生成可部署目录（不是逐篇预渲染 HTML）。
+Generate a deployable output (not pre-rendered per-file HTML pages).
 
 ```bash
 notes-forge build [input_dir] -o [output_dir]
 ```
 
-常用参数：
+Common options:
 
 - `--include md,pdf,ipynb`
+- `--copy-all-files` (explicitly copy all non-hidden files; default is include-selected content + Markdown image assets)
 - `--ignore-dir node_modules,.git,build`
 - `--hide-tree`
 - `--hide-toc`
 - `--enable-search`
 - `--enable-download`
-- `--footer "你的页脚文案"`
+- `--footer "your footer text"`
 
 ### 2) serve
 
-服务模式二选一：
+Choose one mode:
 
-- `--md-from <dir>`：直接服务源目录（推荐日常使用）
-- `--html-from <dir>`：服务已构建静态目录
+- `--md-from <dir>`: serve source directory directly (recommended for daily usage)
+- `--html-from <dir>`: serve prebuilt static output directory
 
 ```bash
 notes-forge serve --md-from . --port 8080
 notes-forge serve --html-from public --port 8080
 ```
 
-常用参数：
+Common options:
 
 - `--host 127.0.0.1`
 - `-p, --port 8080`
@@ -107,44 +112,46 @@ notes-forge serve --html-from public --port 8080
 
 ### 3) clean
 
-清理构建输出目录：
+Remove generated output directory:
 
 ```bash
 notes-forge clean -o public
 ```
 
-## 常见示例
+## Common Examples
 
 ```bash
-# 仅展示 Markdown
+# Show Markdown only
 notes-forge serve --md-from . --include md
 
-# 忽略多个目录
+# Build and explicitly copy all non-hidden files (legacy-compatible behavior)
+notes-forge build . -o public --copy-all-files
+
+# Ignore multiple directories
 notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 
-# 启用搜索和下载按钮
+# Enable search and download button
 notes-forge serve --md-from . --enable-search --enable-download
 
-# 添加固定页脚
+# Add fixed footer
 notes-forge serve --md-from . --footer "© 2026 Your Name"
 ```
 
-## 关于“可部署”的准确说明
+## What "Deployable" Means
 
-- `notes-forge build` 不会把每个 `.md/.pdf/.ipynb` 预先转换成独立 HTML 页面。
-- `public` 的结构本质上是：
-  - 一个统一的前端入口 `index.html`
-  - 内容索引 `tree.json`
-  - 从源目录复制过去的原始内容文件（以及其他被保留文件）
-- 页面渲染发生在浏览器端：前端按 `tree.json` 找到并加载原始文件进行展示。
-- 因此部署方式很简单：把 `public` 整个目录原样上传到任意静态文件服务器即可。
+- `notes-forge build` does not pre-convert each `.md/.pdf/.ipynb` into independent HTML pages.
+- `public` is essentially:
+  - Single frontend entry `index.html`
+  - Content index `tree.json`
+  - Copied source content files:
+    - Default: include-selected content types (`md/pdf/ipynb`) and local Markdown image assets
+    - Optional: all non-hidden files with `--copy-all-files`
+- Rendering happens in the browser: frontend loads raw files by `tree.json` and renders them.
+- Deployment is simple: upload the whole `public` directory to any static file host.
 
-## 注意事项
+## Notes
 
-- `--enable-search` 与 `--hide-tree` 不能同时使用。
-- 默认 `host=127.0.0.1`，如果要局域网访问请显式指定 `--host 0.0.0.0`。
-- 在 `serve --md-from` 模式下，服务端会限制可访问内容文件类型，减少无关文件暴露风险。
-
-## 许可证
-
-请按仓库主许可证为准。
+- `--enable-search` and `--hide-tree` cannot be used together.
+- Default host is `127.0.0.1`; for LAN access, set `--host 0.0.0.0` explicitly.
+- In `serve --md-from` mode, server-side access is restricted to allowed content types. When `--include` contains `md`, common local Markdown image assets are also allowed.
+- Relative document links (`.md/.pdf/.ipynb`) in Markdown are intercepted and loaded in-app. External links (`http/https/mailto`) keep default browser behavior.

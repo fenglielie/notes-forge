@@ -2,41 +2,52 @@
 
 [English](./README.md) | 简体中文
 
-`notes-forge` 是一个零配置、开箱即用的笔记静态站点工具。
-目标是让你在本地目录里直接运行命令，就能浏览和分享 Markdown/PDF/Jupyter Notebook 内容，也可以部署到静态托管。
+`notes-forge` 是一个面向笔记目录的零配置静态站点工具。
+它把 Markdown、PDF 和 Jupyter Notebook 放到同一个界面里，同时支持本地预览和静态部署。
+和很多偏文档站点的工具不同，它不要求额外配置文件、不要求单独的主题配置，也不要求在 Markdown 头部添加 front matter 或其他元数据。
 
 - 源码仓库：https://github.com/fenglielie/notes-forge
 - 在线文档：https://fenglielie.github.io/notes-forge/
 
+![](./assets/demo1.png)
+
+![](./assets/demo2.png)
+
+## 为什么是 notes-forge
+
+- 不需要额外配置文件。
+- 不需要给 Markdown 补 front matter。
+- 不要求为了工具重组目录结构。
+- 不需要先搭一套文档站点工程再预览或部署。
+
 ## 适用场景
 
-- 你有一堆分散在目录中的 `.md` / `.pdf` / `.ipynb` 文件，想快速统一浏览。
-- 你不想维护复杂配置文件、主题系统或构建链路。
-- 你希望支持两种模式：
-  - 直接内存服务（不生成输出目录）
-  - 生成可部署目录（可部署到任意静态托管）
+- 希望把 `.md`、`.pdf` 和 `.ipynb` 文件放在同一个界面里浏览。
+- 希望直接使用现有 Markdown 文件，而不是为某个工具补写 front matter 或项目专用元数据。
+- 不想维护额外的站点生成器、主题系统或构建流程。
+- 希望同一套内容既能本地预览，也能直接部署为静态站点。
 
 ## 核心特性
 
-- 零配置默认可用：默认当前目录、默认端口、默认包含全部支持格式。
-- 双模式：
-  - `serve --md-from .`：内存模式，启动快，不落地站点文件。
-  - `build . -o public`：生成静态站点，可部署。
-- 内容树自动扫描：按目录结构生成树。
-- 支持格式过滤：`--include md,pdf,ipynb`。
-- 当 `--include` 包含 `md` 时，会自动保留 Markdown 常见本地图片资源（如 `png/jpg/svg/webp`）。
-- Markdown 内相对链接到 `.md/.pdf/.ipynb` 时，会在应用内跳转并加载对应文档（不走浏览器默认下载）。
-- 支持目录忽略：`--ignore-dir`（可重复或逗号分隔）。
-- UI 开关：
+- 零配置默认可用：默认当前目录、默认端口、默认启用全部支持格式。
+- 双模式支持：
+  - `serve --md-from .`：内存预览模式，不生成输出目录。
+  - `build . -o public`：生成可部署的静态输出。
+- 按目录结构自动生成内容树。
+- 支持通过 `--include md,pdf,ipynb` 选择内容格式。
+- 当包含 `md` 时，自动保留常见 Markdown 本地图片资源。
+- Markdown 中指向 `.md`、`.pdf`、`.ipynb` 的相对链接会在应用内处理。
+- 支持通过 `--ignore-dir` 排除目录（可重复或逗号分隔）。
+- 前端界面开关：
   - `--hide-tree`
   - `--hide-toc`
   - `--enable-search`
   - `--enable-download`
-  - `--footer "..."`。
-- 服务增强：
-  - 默认仅绑定本机回环地址 `127.0.0.1`
-  - 端口占用自动递增回退
-  - 可选 HTTP 访问日志输出。
+  - `--footer "..."`
+- 面向本地使用的默认服务行为：
+  - 默认绑定地址为 `127.0.0.1`
+  - 端口被占用时自动回退
+  - 可选 HTTP 访问日志输出
 
 ## 安装
 
@@ -77,7 +88,7 @@ notes-forge serve --html-from public -p 8080
 
 ### build
 
-生成可部署目录（不是逐篇预渲染 HTML）。
+生成可部署的静态输出。源文件不会被预先转换成独立 HTML 页面。
 
 ```bash
 notes-forge build [input_dir] -o [output_dir]
@@ -96,9 +107,9 @@ notes-forge build [input_dir] -o [output_dir]
 
 ### serve
 
-服务模式二选一：
+支持以下两种服务模式：
 
-- `--md-from <dir>`：直接服务源目录（推荐日常使用）
+- `--md-from <dir>`：直接服务源目录
 - `--html-from <dir>`：服务已构建静态目录
 
 ```bash
@@ -140,31 +151,31 @@ notes-forge serve --md-from . --enable-search --enable-download
 notes-forge serve --md-from . --footer "© 2026 Your Name"
 ```
 
-## 关于“可部署”的准确说明
+## 部署
 
-- `notes-forge build` 不会把每个 `.md/.pdf/.ipynb` 预先转换成独立 HTML 页面。
-- `public` 的结构本质上是：
-  - 一个统一的前端入口 `index.html`
-  - 内容索引 `tree.json`
-  - 从源目录复制过去的原始内容文件：
-    - 默认：按 `--include` 选择的内容类型（`md/pdf/ipynb`）以及 Markdown 本地图片资源
-    - 可选：使用 `--copy-all-files` 复制全部非隐藏文件
-- 页面渲染发生在浏览器端：前端按 `tree.json` 找到并加载原始文件进行展示。
-- 因此部署方式很简单：把 `public` 整个目录原样上传到任意静态文件服务器即可。
-- 这个仓库本身的文档也可以直接用 `notes-forge` 部署到 GitHub Pages：
-  - 仓库地址：https://github.com/fenglielie/notes-forge
+- `notes-forge build` 不会把每个 `.md`、`.pdf` 或 `.ipynb` 单独转换成 HTML 页面。
+- 生成的 `public` 目录包含：
+  - 统一前端入口：`index.html`
+  - 内容索引：`tree.json`
+  - 从输入目录复制得到的原始内容文件
+    - 默认：按 `--include` 选择的内容类型，以及 Markdown 本地图片资源
+    - 可选：启用 `--copy-all-files` 后复制全部非隐藏文件
+- 页面渲染发生在浏览器端。前端通过 `tree.json` 加载原始文件并按需渲染。
+- 因此，部署时只需要把生成后的 `public` 目录发布到任意静态托管服务。
+- 这个仓库的文档站点本身就是按这种方式发布的：
+  - 源码仓库：https://github.com/fenglielie/notes-forge
   - 在线页面：https://fenglielie.github.io/notes-forge/
 
 ## 注意事项
 
 - `--enable-search` 与 `--hide-tree` 不能同时使用。
-- 默认 `host=127.0.0.1`，如果要局域网访问请显式指定 `--host 0.0.0.0`。
-- 在 `serve --md-from` 模式下，服务端会限制可访问内容文件类型；当 `--include` 包含 `md` 时，也允许访问 Markdown 引用的常见本地图片资源。
-- Markdown 中的相对文档链接（`.md/.pdf/.ipynb`）会由前端拦截并在应用内加载；外部链接（`http/https/mailto`）保持默认行为。
+- 默认主机地址为 `127.0.0.1`。如需局域网访问，请显式指定 `--host 0.0.0.0`。
+- 在 `serve --md-from` 模式下，服务端仅允许访问受支持的内容类型；当包含 `md` 时，也允许访问常见 Markdown 本地图片资源。
+- Markdown 中指向 `.md`、`.pdf`、`.ipynb` 的相对链接会由前端拦截并在应用内打开；外部链接（`http`、`https`、`mailto`）仍然保持浏览器默认行为。
 
 ## 模块划分
 
-内部模块拆分如下：
+内部模块结构如下：
 
 - `notes_forge/notes_forge.py`：稳定的公开入口/兼容门面，以及 CLI 入口目标。
 - `notes_forge/cli_app.py`：命令解析与顶层命令调度。

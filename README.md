@@ -2,51 +2,62 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-`notes-forge` is a zero-config, out-of-the-box static notes site tool.
-Its goal is simple: run one command in your local folder to browse and share Markdown/PDF/Jupyter Notebook content, and optionally deploy it to any static host.
+`notes-forge` is a zero-configuration tool for browsing and publishing notes as a static site.
+It gives Markdown, PDF, and Jupyter Notebook files a single interface, and supports both local preview and static deployment.
+Unlike many documentation-oriented tools, it does not require a config file, a theme setup step, or front matter in Markdown files.
 
 - Source code: https://github.com/fenglielie/notes-forge
 - Live docs: https://fenglielie.github.io/notes-forge/
 
+![](./assets/demo1.png)
+
+![](./assets/demo2.png)
+
+## Why notes-forge
+
+- No config file.
+- No Markdown front matter.
+- No project-specific content structure.
+- No separate docs-site setup before preview or deployment.
+
 ## Use Cases
 
-- You have scattered `.md` / `.pdf` / `.ipynb` files and want one unified viewer.
-- You do not want to maintain a complex config/theme/build pipeline.
-- You want two modes:
-  - In-memory preview mode (no generated site folder)
-  - Static output mode (deployable to any static hosting)
+- View `.md`, `.pdf`, and `.ipynb` files in one place.
+- Keep existing Markdown files as they are, without adding front matter or project-specific metadata.
+- Skip the overhead of a custom site generator, theme system, or build pipeline.
+- Use the same content tree for both local preview and static deployment.
 
 ## Key Features
 
-- Zero-config defaults: current directory, default port, all supported formats.
-- Dual modes:
-  - `serve --md-from .`: in-memory mode, fast startup, no output files.
-  - `build . -o public`: generate a deployable static site.
-- Auto tree scan based on folder structure.
-- Format filtering: `--include md,pdf,ipynb`.
-- When `--include` contains `md`, common local Markdown image assets are also preserved (for example `png/jpg/svg/webp`).
-- Relative Markdown links to `.md/.pdf/.ipynb` are handled in-app (no browser default download flow).
-- Directory ignore support: `--ignore-dir` (repeatable or comma-separated).
-- UI toggles:
+- Zero-configuration defaults: current directory, default port, and all supported formats.
+- Two operating modes:
+  - `serve --md-from .`: in-memory preview without generating an output directory.
+  - `build . -o public`: static output suitable for deployment.
+- Automatic tree generation based on the source directory structure.
+- Format selection via `--include md,pdf,ipynb`.
+- Preserve common Markdown image assets automatically when `md` is included.
+- In-app handling for relative links to `.md`, `.pdf`, and `.ipynb` files.
+- Directory exclusion via `--ignore-dir` (repeatable or comma-separated).
+- Frontend options:
   - `--hide-tree`
   - `--hide-toc`
   - `--enable-search`
   - `--enable-download`
   - `--footer "..."`
-- Service improvements:
-  - Default bind to loopback `127.0.0.1`
-  - Auto port fallback when occupied
-  - Optional HTTP access log output
+- Local-first serving defaults:
+  - Default bind address `127.0.0.1`
+  - Automatic port fallback when the requested port is unavailable
+  - Optional HTTP access logging
 
 ## Installation
 
-The command name is `notes-forge`. Install with `uv`:
+The command name is `notes-forge`. Install it with `uv`:
 
 ```bash
 uv tool install git+https://github.com/fenglielie/notes-forge.git@main
 ```
 
-Or install into the current Python environment:
+Or install it into the current Python environment:
 
 ```bash
 pip install git+https://github.com/fenglielie/notes-forge.git@main
@@ -77,7 +88,7 @@ notes-forge serve --html-from public -p 8080
 
 ### build
 
-Generate a deployable output (not pre-rendered per-file HTML pages).
+Generate static output for deployment. Source files are not pre-rendered into separate HTML pages.
 
 ```bash
 notes-forge build [input_dir] -o [output_dir]
@@ -96,9 +107,9 @@ Common options:
 
 ### serve
 
-Choose one mode:
+Choose one of the following modes:
 
-- `--md-from <dir>`: serve source directory directly (recommended for daily usage)
+- `--md-from <dir>`: serve the source directory directly
 - `--html-from <dir>`: serve prebuilt static output directory
 
 ```bash
@@ -140,31 +151,31 @@ notes-forge serve --md-from . --enable-search --enable-download
 notes-forge serve --md-from . --footer "© 2026 Your Name"
 ```
 
-## What "Deployable" Means
+## Deployment
 
-- `notes-forge build` does not pre-convert each `.md/.pdf/.ipynb` into independent HTML pages.
-- `public` is essentially:
-  - Single frontend entry `index.html`
-  - Content index `tree.json`
-  - Copied source content files:
-    - Default: include-selected content types (`md/pdf/ipynb`) and local Markdown image assets
-    - Optional: all non-hidden files with `--copy-all-files`
-- Rendering happens in the browser: frontend loads raw files by `tree.json` and renders them.
-- Deployment is simple: upload the whole `public` directory to any static file host.
-- This repository's documentation can itself be deployed with `notes-forge` to GitHub Pages:
-  - Source repo: https://github.com/fenglielie/notes-forge
-  - Online site: https://fenglielie.github.io/notes-forge/
+- `notes-forge build` does not turn each `.md`, `.pdf`, or `.ipynb` file into its own HTML page.
+- The generated `public` directory contains:
+  - A single frontend entry point: `index.html`
+  - A content index: `tree.json`
+  - Source content files copied from the input directory
+    - By default: selected content types (`md`, `pdf`, `ipynb`) and local Markdown image assets
+    - Optionally: all non-hidden files when `--copy-all-files` is enabled
+- Rendering happens in the browser. The frontend loads raw source files through `tree.json` and renders them on demand.
+- Deployment simply means publishing the generated `public` directory to any static host.
+- This repository's own documentation is published that way:
+  - Source repository: https://github.com/fenglielie/notes-forge
+  - Live site: https://fenglielie.github.io/notes-forge/
 
 ## Notes
 
 - `--enable-search` and `--hide-tree` cannot be used together.
-- Default host is `127.0.0.1`; for LAN access, set `--host 0.0.0.0` explicitly.
-- In `serve --md-from` mode, server-side access is restricted to allowed content types. When `--include` contains `md`, common local Markdown image assets are also allowed.
-- Relative document links (`.md/.pdf/.ipynb`) in Markdown are intercepted and loaded in-app. External links (`http/https/mailto`) keep default browser behavior.
+- The default host is `127.0.0.1`. For LAN access, specify `--host 0.0.0.0` explicitly.
+- In `serve --md-from` mode, server-side file access is limited to supported content types. When `md` is included, common local Markdown image assets are allowed as well.
+- Relative links to `.md`, `.pdf`, and `.ipynb` files are intercepted and opened inside the app. External links (`http`, `https`, `mailto`) keep the browser default behavior.
 
 ## Architecture
 
-Module split (internal):
+Internal module layout:
 
 - `notes_forge/notes_forge.py`: stable public entry/facade and CLI entrypoint target.
 - `notes_forge/cli_app.py`: command parsing and top-level command orchestration.

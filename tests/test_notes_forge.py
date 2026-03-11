@@ -257,6 +257,87 @@ class TestNotesForgePortFallback(unittest.TestCase):
             handler.send_error.assert_called_once()
             mock_super_get.assert_not_called()
 
+    def test_build_site_copies_only_selected_include_formats_by_default(self):
+        with tempfile.TemporaryDirectory() as src_tmp, tempfile.TemporaryDirectory() as out_tmp:
+            src = Path(src_tmp)
+            out = Path(out_tmp) / "public"
+            (src / "a.md").write_text("# A", encoding="utf-8")
+            (src / "img.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+            (src / "b.pdf").write_bytes(b"%PDF-1.4")
+            (src / "n.ipynb").write_text("{}", encoding="utf-8")
+            (src / "secret.py").write_text("print('x')", encoding="utf-8")
+
+            notes_forge.build_site(
+                src,
+                out,
+                include_formats={"md"},
+            )
+
+            self.assertTrue((out / "a.md").exists())
+            self.assertTrue((out / "img.png").exists())
+            self.assertFalse((out / "b.pdf").exists())
+            self.assertFalse((out / "n.ipynb").exists())
+            self.assertFalse((out / "secret.py").exists())
+            self.assertTrue((out / "index.html").exists())
+            self.assertTrue((out / "tree.json").exists())
+
+    def test_build_site_copy_all_files_option_keeps_non_hidden_files(self):
+        with tempfile.TemporaryDirectory() as src_tmp, tempfile.TemporaryDirectory() as out_tmp:
+            src = Path(src_tmp)
+            out = Path(out_tmp) / "public"
+            (src / "a.md").write_text("# A", encoding="utf-8")
+            (src / "secret.py").write_text("print('x')", encoding="utf-8")
+
+            notes_forge.build_site(
+                src,
+                out,
+                include_formats={"md"},
+                copy_all_files=True,
+            )
+
+            self.assertTrue((out / "a.md").exists())
+            self.assertTrue((out / "secret.py").exists())
+
+    def test_copy_site_sources_skips_symlink_target_outside_root(self):
+        with tempfile.TemporaryDirectory() as src_tmp, tempfile.TemporaryDirectory() as out_tmp, tempfile.TemporaryDirectory() as ext_tmp:
+            src = Path(src_tmp)
+            out = Path(out_tmp)
+            outside = Path(ext_tmp) / "outside.md"
+            outside.write_text("# outside", encoding="utf-8")
+
+            link = src / "outside-link.md"
+            try:
+                link.symlink_to(outside)
+            except (OSError, NotImplementedError):
+                self.skipTest("Symlink creation is not available in this environment.")
+
+            copied = notes_forge.copy_site_sources(
+                src,
+                out,
+                out / "public",
+                include_formats={"md"},
+                copy_all_files=False,
+            )
+
+            self.assertEqual(copied, 0)
+            self.assertFalse((out / "outside-link.md").exists())
+
+    def test_memory_handler_allows_markdown_local_image_assets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "note.md").write_text("# note", encoding="utf-8")
+            (root / "img.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+            handler_cls = notes_forge.make_memory_handler(root, {"md"})
+            handler = handler_cls.__new__(handler_cls)
+            handler.path = "/img.png"
+            handler.send_error = MagicMock()
+
+            with patch("http.server.SimpleHTTPRequestHandler.do_GET") as mock_super_get:
+                handler.do_GET()
+
+            handler.send_error.assert_not_called()
+            mock_super_get.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

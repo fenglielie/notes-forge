@@ -6,11 +6,27 @@ build-backend = "setuptools.build_meta"
 name = "notes-forge"
 version = "0.1.0"
 description = "Zero-config notes preview and static deployment CLI for Markdown, PDF, and Jupyter notebooks"
+readme = "README.md"
 authors = [
     {name = "fenglielie", email = "fenglielie@qq.com"}
 ]
 requires-python = ">=3.11"
+keywords = ["notes", "markdown", "pdf", "ipynb", "static-site", "cli", "preview"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Utilities",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Operating System :: OS Independent"
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/fenglielie/notes-forge"
+Repository = "https://github.com/fenglielie/notes-forge"
 
 [project.scripts]
 notes-forge = "notes_forge.notes_forge:main"

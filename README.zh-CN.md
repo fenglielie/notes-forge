@@ -37,6 +37,7 @@
 - 支持通过 `--include md,pdf,ipynb` 选择内容格式。
 - 当包含 `md` 时，自动保留常见 Markdown 本地图片资源。
 - Markdown 中指向 `.md`、`.pdf`、`.ipynb` 的相对链接会在应用内处理。
+- 支持通过 `mermaid` 代码块渲染 Mermaid 图表。
 - 支持通过 `--ignore-dir` 排除目录（可重复或逗号分隔）。
 - 前端界面开关：
   - `--hide-tree`

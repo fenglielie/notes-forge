@@ -67,6 +67,7 @@ const FAB_OUTSIDE_GUTTER = 12;
 const FAB_OUTSIDE_MIN_SPACE = 76;
 let scrollSaveTimer = null;
 let hljsReadyPromise = null;
+let mermaidReadyPromise = null;
 let currentPdfBlobUrl = null;
 let pdfjsReadyPromise = null;
 let activePdfDoc = null;
@@ -84,6 +85,7 @@ let rightSidebarAutoWidth = true;
 let leftAutoFitFrame = 0;
 let rightAutoFitFrame = 0;
 const HLJS_VERSION = "11.8.0";
+const MERMAID_VERSION = "11.4.1";
 const REQUIRED_HLJS_LANGS = [
     { name: "c", url: `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HLJS_VERSION}/build/languages/c.min.js` },
     { name: "cpp", url: `https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@${HLJS_VERSION}/build/languages/cpp.min.js` },
@@ -255,6 +257,70 @@ function ensureHljsReady() {
         tryLoad();
     });
     return hljsReadyPromise;
+}
+
+function ensureMermaidReady() {
+    if (window.mermaid && typeof window.mermaid.run === "function") {
+        return Promise.resolve(window.mermaid);
+    }
+    if (mermaidReadyPromise) return mermaidReadyPromise;
+
+    const cdnList = [
+        `https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js`,
+        `https://unpkg.com/mermaid@${MERMAID_VERSION}/dist/mermaid.min.js`,
+        `https://cdnjs.cloudflare.com/ajax/libs/mermaid/${MERMAID_VERSION}/mermaid.min.js`,
+    ];
+
+    mermaidReadyPromise = new Promise((resolve) => {
+        let idx = 0;
+        const tryLoad = () => {
+            if (window.mermaid && typeof window.mermaid.run === "function") {
+                window.mermaid.initialize({
+                    startOnLoad: false,
+                    securityLevel: "loose",
+                    theme: document.body.classList.contains("dark") ? "dark" : "default",
+                });
+                resolve(window.mermaid);
+                return;
+            }
+            if (idx >= cdnList.length) {
+                resolve(null);
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = cdnList[idx++];
+            script.async = true;
+            script.onload = tryLoad;
+            script.onerror = tryLoad;
+            document.head.appendChild(script);
+        };
+        tryLoad();
+    });
+
+    return mermaidReadyPromise;
+}
+
+async function renderMermaidDiagrams(container) {
+    const mermaidBlocks = container.querySelectorAll("pre code.language-mermaid");
+    if (!mermaidBlocks.length) return;
+
+    mermaidBlocks.forEach((codeEl) => {
+        const pre = codeEl.closest("pre");
+        if (!pre || pre.dataset.mermaidDone === "1") return;
+        const source = codeEl.textContent || "";
+        const target = document.createElement("div");
+        target.className = "mermaid";
+        target.textContent = source;
+        pre.replaceWith(target);
+        pre.dataset.mermaidDone = "1";
+    });
+
+    const mermaidApi = await ensureMermaidReady();
+    if (!mermaidApi) return;
+
+    const nodes = Array.from(container.querySelectorAll(".mermaid"));
+    if (!nodes.length) return;
+    await mermaidApi.run({ nodes });
 }
 
 function loadExternalScript(src) {
@@ -1510,9 +1576,12 @@ function rewriteRelativeLinks(container, mdPath) {
     });
 }
 
-function enhanceMarkdownContent(container) {
+async function enhanceMarkdownContent(container) {
+    await renderMermaidDiagrams(container);
+
     container.querySelectorAll("pre code").forEach(codeEl => {
         if (codeEl.dataset.hljsDone === "1") return;
+        if (codeEl.classList.contains("language-mermaid")) return;
         normalizeCodeLanguageClass(codeEl);
         if (window.hljs && typeof window.hljs.highlightElement === "function") {
             window.hljs.highlightElement(codeEl);
@@ -1879,7 +1948,7 @@ async function loadNotebookDocument(path) {
         viewer.appendChild(root);
         rewriteRelativeLinks(viewer, currentFilePath);
         await ensureHljsReady();
-        enhanceMarkdownContent(viewer);
+        await enhanceMarkdownContent(viewer);
 
         if (window.MathJax && window.MathJax.typesetPromise) {
             await MathJax.typesetPromise([viewer]);
@@ -1931,7 +2000,7 @@ async function loadMarkdown(path) {
 
         rewriteRelativeLinks(viewer, currentFilePath);
         await ensureHljsReady();
-        enhanceMarkdownContent(viewer);
+        await enhanceMarkdownContent(viewer);
 
         if (window.MathJax && window.MathJax.typesetPromise) {
             await MathJax.typesetPromise([viewer]);

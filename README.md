@@ -37,6 +37,7 @@ Unlike many documentation-oriented tools, it does not require a config file, a t
 - Format selection via `--include md,pdf,ipynb`.
 - Preserve common Markdown image assets automatically when `md` is included.
 - In-app handling for relative links to `.md`, `.pdf`, and `.ipynb` files.
+- Mermaid diagrams in Markdown via `mermaid` fenced code blocks.
 - Directory exclusion via `--ignore-dir` (repeatable or comma-separated).
 - Frontend options:
   - `--hide-tree`

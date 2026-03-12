@@ -31,7 +31,7 @@
 
 - 零配置默认可用：默认当前目录、默认端口、默认启用全部支持格式。
 - 双模式支持：
-  - `serve --md-from .`：内存预览模式，不生成输出目录。
+  - `serve --source-from .`：内存预览模式，不生成输出目录。
   - `build . -o public`：生成可部署的静态输出。
 - 按目录结构自动生成内容树。
 - 支持通过 `--include md,pdf,ipynb` 选择内容格式。
@@ -76,7 +76,7 @@ notes-forge --version
 
 ```bash
 # 1) 直接预览（内存模式，不生成 public）
-notes-forge serve --md-from .
+notes-forge serve --source-from .
 
 # 2) 构建静态站点
 notes-forge build . -o public
@@ -111,12 +111,12 @@ notes-forge build [input_dir] -o [output_dir]
 
 支持以下两种服务模式：
 
-- `--md-from <dir>`：直接服务源目录
+- `--source-from <dir>`：直接服务源目录
 - `--html-from <dir>`：服务已构建静态目录
-- 如果两者都不传，`serve` 默认等价于 `--md-from .`
+- 如果两者都不传，`serve` 默认等价于 `--source-from .`
 
 ```bash
-notes-forge serve --md-from . --port 8080
+notes-forge serve --source-from . --port 8080
 notes-forge serve --html-from public --port 8080
 ```
 
@@ -125,7 +125,10 @@ notes-forge serve --html-from public --port 8080
 - `--host 127.0.0.1`
 - `-p, --port 8080`
 - `--no-browser`
+- `--http-log`（将访问日志输出到 stderr）
 - `--http-log-file logs/http-access.log`
+
+HTTP 访问日志默认关闭。可通过 `--http-log` 和/或 `--http-log-file` 显式开启。
 
 补充说明：
 
@@ -144,7 +147,7 @@ notes-forge clean -o public
 
 ```bash
 # 仅展示 Markdown
-notes-forge serve --md-from . --include md
+notes-forge serve --source-from . --include md
 
 # 构建时显式复制所有非隐藏文件（兼容旧行为）
 notes-forge build . -o public --copy-all-files
@@ -153,10 +156,10 @@ notes-forge build . -o public --copy-all-files
 notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 
 # 启用搜索、下载和主题按钮
-notes-forge serve --md-from . --enable-search --enable-download --enable-theme
+notes-forge serve --source-from . --enable-search --enable-download --enable-theme
 
 # 添加固定页脚
-notes-forge serve --md-from . --footer "© Your Name"
+notes-forge serve --source-from . --footer "© Your Name"
 ```
 
 ## 部署
@@ -178,7 +181,7 @@ notes-forge serve --md-from . --footer "© Your Name"
 
 - `--enable-search` 与 `--hide-tree` 不能同时使用。
 - 默认主机地址为 `127.0.0.1`。如需局域网访问，请显式指定 `--host 0.0.0.0`。
-- 在 `serve --md-from` 模式下，服务端仅允许访问受支持的内容类型；当包含 `md` 时，也允许访问常见 Markdown 本地图片资源。
+- 在 `serve --source-from` 模式下，服务端仅允许访问受支持的内容类型；当包含 `md` 时，也允许访问常见 Markdown 本地图片资源。
 - Markdown 中指向 `.md`、`.pdf`、`.ipynb` 的相对链接会由前端拦截并在应用内打开；外部链接（`http`、`https`、`mailto`）仍然保持浏览器默认行为。
 
 ## 模块划分

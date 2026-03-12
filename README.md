@@ -31,7 +31,7 @@ Unlike many documentation-oriented tools, it does not require a config file, a t
 
 - Zero-configuration defaults: current directory, default port, and all supported formats.
 - Two operating modes:
-  - `serve --md-from .`: in-memory preview without generating an output directory.
+  - `serve --source-from .`: in-memory preview without generating an output directory.
   - `build . -o public`: static output suitable for deployment.
 - Automatic tree generation based on the source directory structure.
 - Format selection via `--include md,pdf,ipynb`.
@@ -76,7 +76,7 @@ In your notes directory:
 
 ```bash
 # 1) Preview directly (in-memory mode, no public output)
-notes-forge serve --md-from .
+notes-forge serve --source-from .
 
 # 2) Build static site output
 notes-forge build . -o public
@@ -111,12 +111,12 @@ Common options:
 
 Choose one of the following modes:
 
-- `--md-from <dir>`: serve the source directory directly
+- `--source-from <dir>`: serve the source directory directly
 - `--html-from <dir>`: serve prebuilt static output directory
-- If neither is provided, `serve` defaults to `--md-from .`
+- If neither is provided, `serve` defaults to `--source-from .`
 
 ```bash
-notes-forge serve --md-from . --port 8080
+notes-forge serve --source-from . --port 8080
 notes-forge serve --html-from public --port 8080
 ```
 
@@ -125,7 +125,10 @@ Common options:
 - `--host 127.0.0.1`
 - `-p, --port 8080`
 - `--no-browser`
+- `--http-log` (print access logs to stderr)
 - `--http-log-file logs/http-access.log`
+
+HTTP access logging is disabled by default. Enable it explicitly with `--http-log` and/or `--http-log-file`.
 
 Notes:
 
@@ -144,7 +147,7 @@ notes-forge clean -o public
 
 ```bash
 # Show Markdown only
-notes-forge serve --md-from . --include md
+notes-forge serve --source-from . --include md
 
 # Build and explicitly copy all non-hidden files (legacy-compatible behavior)
 notes-forge build . -o public --copy-all-files
@@ -153,10 +156,10 @@ notes-forge build . -o public --copy-all-files
 notes-forge build . -o public --ignore-dir .git --ignore-dir node_modules,dist
 
 # Enable search, download, and theme buttons
-notes-forge serve --md-from . --enable-search --enable-download --enable-theme
+notes-forge serve --source-from . --enable-search --enable-download --enable-theme
 
 # Add fixed footer
-notes-forge serve --md-from . --footer "© Your Name"
+notes-forge serve --source-from . --footer "© Your Name"
 ```
 
 ## Deployment
@@ -178,7 +181,7 @@ notes-forge serve --md-from . --footer "© Your Name"
 
 - `--enable-search` and `--hide-tree` cannot be used together.
 - The default host is `127.0.0.1`. For LAN access, specify `--host 0.0.0.0` explicitly.
-- In `serve --md-from` mode, server-side file access is limited to supported content types. When `md` is included, common local Markdown image assets are allowed as well.
+- In `serve --source-from` mode, server-side file access is limited to supported content types. When `md` is included, common local Markdown image assets are allowed as well.
 - Relative links to `.md`, `.pdf`, and `.ipynb` files are intercepted and opened inside the app. External links (`http`, `https`, `mailto`) keep the browser default behavior.
 
 ## Architecture

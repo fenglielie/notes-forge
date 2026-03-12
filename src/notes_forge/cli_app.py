@@ -44,9 +44,10 @@ def args_parse() -> argparse.Namespace:
   notes-forge --log-level DEBUG build . -o public
   notes-forge build . -o public
   notes-forge serve -p 8080 --include md,pdf,ipynb
-  notes-forge serve --md-from . --http-log-file logs/http-access.log
+  notes-forge serve --source-from . --http-log
+  notes-forge serve --source-from . --http-log-file logs/http-access.log
   notes-forge serve --html-from public -p 8080
-  notes-forge serve --md-from . -p 8080
+  notes-forge serve --source-from . -p 8080
   notes-forge clean -o public""",
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -101,10 +102,10 @@ def args_parse() -> argparse.Namespace:
 
     serve_parser = subparsers.add_parser(
         "serve",
-        help="Serve html site or markdown source",
+        help="Serve html site or source content",
         description=(
-            "Serve existing static html folder, or serve markdown source directly in memory.\n"
-            "If neither --html-from nor --md-from is given, --md-from . is used."
+            "Serve existing static html folder, or serve source content directly in memory.\n"
+            "If neither --html-from nor --source-from is given, --source-from . is used."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -126,9 +127,9 @@ def args_parse() -> argparse.Namespace:
         help="Serve from existing static html directory (no build).",
     )
     serve_parser.add_argument(
-        "--md-from",
-        dest="md_from",
-        help="Serve markdown source directory directly in memory (no output files).",
+        "--source-from",
+        dest="source_from",
+        help="Serve source directory directly in memory (no output files).",
     )
     serve_parser.add_argument(
         "--host",
@@ -148,10 +149,15 @@ def args_parse() -> argparse.Namespace:
         help="Do not auto-open a browser after server starts.",
     )
     serve_parser.add_argument(
+        "--http-log",
+        action="store_true",
+        help="Print HTTP access logs to stderr.",
+    )
+    serve_parser.add_argument(
         "--http-log-file",
         type=str,
         default=None,
-        help="Write HTTP access logs to this file (instead of stderr).",
+        help="Write HTTP access logs to this file.",
     )
 
     clean_parser = subparsers.add_parser(
@@ -232,11 +238,15 @@ def main() -> None:
                 include_formats = normalize_include_formats(args.include)
             except ValueError as exc:
                 raise SystemExit(str(exc)) from exc
-            if args.html_from and args.md_from:
-                raise SystemExit("Use either --html-from or --md-from, not both.")
+            if args.html_from and args.source_from:
+                raise SystemExit("Use either --html-from or --source-from, not both.")
+            http_log_file = Path(args.http_log_file) if args.http_log_file else None
             http_access_logger = create_http_access_logger(
-                Path(args.http_log_file) if args.http_log_file else None
+                log_to_stderr=args.http_log,
+                log_file=http_log_file,
             )
+            if args.http_log:
+                log_notice("HTTP access log : stderr")
             if args.http_log_file:
                 log_notice(
                     f"HTTP access log : {Path(args.http_log_file).expanduser().resolve()}"
@@ -275,11 +285,13 @@ def main() -> None:
                 )
                 return
 
-            md_from = (
-                Path(args.md_from).resolve() if args.md_from else Path(".").resolve()
+            source_from = (
+                Path(args.source_from).resolve()
+                if args.source_from
+                else Path(".").resolve()
             )
             log_notice("Serve mode       : in-memory content")
-            log_notice(f"Source directory : {md_from}")
+            log_notice(f"Source directory : {source_from}")
             log_notice(f"Include formats  : {', '.join(sorted(include_formats))}")
             if args.ignore_dir:
                 log_notice(f"Ignore dirs      : {', '.join(args.ignore_dir)}")
@@ -299,7 +311,7 @@ def main() -> None:
                 "tree.json        : generated on-the-fly (not written to disk)"
             )
             serve_markdown_dir(
-                md_from,
+                source_from,
                 args.host,
                 args.port,
                 include_formats=include_formats,

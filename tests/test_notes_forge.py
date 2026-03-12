@@ -12,6 +12,7 @@ from notes_forge import (
     cli_options,
     constants,
     fs_tree,
+    runtime_logging,
     server_ops,
     ui_assets,
 )
@@ -60,7 +61,7 @@ class TestNotesForgePortFallback(unittest.TestCase):
         [
             "notes-forge",
             "serve",
-            "--md-from",
+            "--source-from",
             ".",
             "--http-log-file",
             "logs/http-access.log",
@@ -69,6 +70,18 @@ class TestNotesForgePortFallback(unittest.TestCase):
     def test_parse_args_http_log_file(self):
         args = cli_app.args_parse()
         self.assertEqual(args.http_log_file, "logs/http-access.log")
+
+    @patch.object(sys, "argv", ["notes-forge", "serve", "--http-log"])
+    def test_parse_args_http_log(self):
+        args = cli_app.args_parse()
+        self.assertTrue(args.http_log)
+
+    def test_create_http_access_logger_disabled_by_default(self):
+        logger = runtime_logging.create_http_access_logger(
+            log_to_stderr=False,
+            log_file=None,
+        )
+        self.assertIsNone(logger)
 
     def test_render_index_html_injects_ui_config(self):
         html = ui_assets.render_index_html(

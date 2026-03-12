@@ -1,6 +1,7 @@
 """Runtime logging helpers."""
 
 import logging
+import sys
 from http.server import SimpleHTTPRequestHandler
 from pathlib import Path
 
@@ -20,12 +21,15 @@ def configure_logging(log_level: str) -> None:
     )
 
 
-def create_http_access_logger(log_file: Path | None) -> logging.Logger | None:
-    if log_file is None:
+def create_http_access_logger(
+    *, log_to_stderr: bool, log_file: Path | None
+) -> logging.Logger | None:
+    if not log_to_stderr and log_file is None:
         return None
 
-    resolved_file = log_file.expanduser().resolve()
-    resolved_file.parent.mkdir(parents=True, exist_ok=True)
+    resolved_file = log_file.expanduser().resolve() if log_file is not None else None
+    if resolved_file is not None:
+        resolved_file.parent.mkdir(parents=True, exist_ok=True)
 
     http_logger = logging.getLogger("notes_forge.cli_app.http_access")
     http_logger.setLevel(logging.INFO)
@@ -38,10 +42,16 @@ def create_http_access_logger(log_file: Path | None) -> logging.Logger | None:
         except Exception:
             pass
 
-    file_handler = logging.FileHandler(resolved_file, encoding="utf-8")
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
-    http_logger.addHandler(file_handler)
+    if log_to_stderr:
+        stream_handler = logging.StreamHandler(sys.stderr)
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(logging.Formatter("%(message)s"))
+        http_logger.addHandler(stream_handler)
+    if resolved_file is not None:
+        file_handler = logging.FileHandler(resolved_file, encoding="utf-8")
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+        http_logger.addHandler(file_handler)
     return http_logger
 
 
@@ -53,7 +63,6 @@ def _emit_http_access_log(
     http_access_logger: logging.Logger | None,
 ) -> None:
     if http_access_logger is None:
-        SimpleHTTPRequestHandler.log_message(handler, format, *args)
         return
 
     try:

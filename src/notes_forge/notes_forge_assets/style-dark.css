@@ -283,6 +283,35 @@ body.dark .nb-output-image-el {
     background: #0d1117;
 }
 
+body.dark .image-preview-overlay {
+    background: rgba(1, 4, 9, 0.82);
+}
+
+body.dark .image-preview-img {
+    background: #0d1117;
+}
+
+body.dark .image-preview-toolbar {
+    border-color: #4b5563;
+    background: rgba(31, 41, 55, 0.95);
+}
+
+body.dark .image-preview-toolbar button {
+    border-color: #4b5563;
+    background: #111827;
+    color: #d1d5db;
+}
+
+body.dark .image-preview-zoom-label {
+    color: #d1d5db;
+}
+
+body.dark .image-preview-close {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #d1d5db;
+}
+
 body.dark .tree-container::-webkit-scrollbar-thumb,
 body.dark .toc-container::-webkit-scrollbar-thumb,
 body.dark .content::-webkit-scrollbar-thumb,

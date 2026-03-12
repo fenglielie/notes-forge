@@ -680,6 +680,137 @@ function closeSearchOverlay() {
     if (searchInput) searchInput.blur();
 }
 
+let imagePreviewOverlayEl = null;
+let imagePreviewImgEl = null;
+let imagePreviewZoomLabelEl = null;
+let imagePreviewZoom = 1;
+const IMAGE_PREVIEW_MIN_ZOOM = 0.2;
+const IMAGE_PREVIEW_MAX_ZOOM = 5;
+const IMAGE_PREVIEW_ZOOM_STEP = 1.2;
+
+function clampImagePreviewZoom(value) {
+    return clamp(value, IMAGE_PREVIEW_MIN_ZOOM, IMAGE_PREVIEW_MAX_ZOOM);
+}
+
+function applyImagePreviewZoom(nextZoom) {
+    imagePreviewZoom = clampImagePreviewZoom(nextZoom);
+    if (imagePreviewImgEl) {
+        imagePreviewImgEl.style.transform = `scale(${imagePreviewZoom})`;
+    }
+    if (imagePreviewZoomLabelEl) {
+        imagePreviewZoomLabelEl.textContent = `${Math.round(imagePreviewZoom * 100)}%`;
+    }
+}
+
+function ensureImagePreviewOverlay() {
+    if (imagePreviewOverlayEl) return;
+    const overlay = document.createElement("div");
+    overlay.id = "imagePreviewOverlay";
+    overlay.className = "image-preview-overlay";
+    overlay.hidden = true;
+    overlay.innerHTML = `
+        <div class="image-preview-toolbar">
+            <button class="image-preview-zoom-out" type="button" aria-label="Zoom out">−</button>
+            <span class="image-preview-zoom-label">100%</span>
+            <button class="image-preview-zoom-in" type="button" aria-label="Zoom in">+</button>
+            <button class="image-preview-zoom-reset" type="button" aria-label="Reset zoom">100%</button>
+        </div>
+        <button class="image-preview-close" type="button" aria-label="Close image preview">✕</button>
+        <div class="image-preview-dialog">
+            <img class="image-preview-img" alt="Image preview" />
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    imagePreviewOverlayEl = overlay;
+    imagePreviewImgEl = overlay.querySelector(".image-preview-img");
+    imagePreviewZoomLabelEl = overlay.querySelector(".image-preview-zoom-label");
+    applyImagePreviewZoom(1);
+
+    const closeBtn = overlay.querySelector(".image-preview-close");
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            closeImagePreview();
+        });
+    }
+    const zoomInBtn = overlay.querySelector(".image-preview-zoom-in");
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener("click", () => {
+            applyImagePreviewZoom(imagePreviewZoom * IMAGE_PREVIEW_ZOOM_STEP);
+        });
+    }
+    const zoomOutBtn = overlay.querySelector(".image-preview-zoom-out");
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener("click", () => {
+            applyImagePreviewZoom(imagePreviewZoom / IMAGE_PREVIEW_ZOOM_STEP);
+        });
+    }
+    const zoomResetBtn = overlay.querySelector(".image-preview-zoom-reset");
+    if (zoomResetBtn) {
+        zoomResetBtn.addEventListener("click", () => {
+            applyImagePreviewZoom(1);
+        });
+    }
+    if (imagePreviewImgEl) {
+        imagePreviewImgEl.addEventListener("dblclick", (event) => {
+            event.preventDefault();
+            applyImagePreviewZoom(1);
+        });
+    }
+    overlay.addEventListener("wheel", (event) => {
+        if (overlay.hidden) return;
+        event.preventDefault();
+        const delta = event.deltaY;
+        if (delta < 0) {
+            applyImagePreviewZoom(imagePreviewZoom * IMAGE_PREVIEW_ZOOM_STEP);
+        } else if (delta > 0) {
+            applyImagePreviewZoom(imagePreviewZoom / IMAGE_PREVIEW_ZOOM_STEP);
+        }
+    }, { passive: false });
+    overlay.addEventListener("click", (event) => {
+        const target = event.target;
+        if (target === overlay) {
+            closeImagePreview();
+        }
+    });
+}
+
+function openImagePreview(src, altText = "") {
+    if (!src) return;
+    ensureImagePreviewOverlay();
+    if (!imagePreviewOverlayEl || !imagePreviewImgEl) return;
+    imagePreviewImgEl.src = src;
+    imagePreviewImgEl.alt = altText || "Image preview";
+    applyImagePreviewZoom(1);
+    imagePreviewOverlayEl.hidden = false;
+}
+
+function closeImagePreview() {
+    if (!imagePreviewOverlayEl || imagePreviewOverlayEl.hidden) return;
+    imagePreviewOverlayEl.hidden = true;
+    if (imagePreviewImgEl) {
+        imagePreviewImgEl.style.removeProperty("transform");
+        imagePreviewImgEl.removeAttribute("src");
+    }
+}
+
+function isPreviewableContentImage(element) {
+    if (!(element instanceof HTMLImageElement)) return false;
+    if (!viewer || !viewer.contains(element)) return false;
+    return !!(element.currentSrc || element.src);
+}
+
+function bindImagePreview() {
+    if (!viewer) return;
+    viewer.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!isPreviewableContentImage(target)) return;
+        event.preventDefault();
+        const src = target.currentSrc || target.src;
+        const altText = target.getAttribute("alt") || "";
+        openImagePreview(src, altText);
+    });
+}
+
 window.addEventListener("hashchange", () => {
     const hashPath = decodeURIComponent(location.hash.replace(/^#/, "").trim());
     if (hashPath && hashPath !== currentFilePath) {
@@ -719,6 +850,27 @@ if (searchOverlay) {
 }
 
 document.addEventListener("keydown", (event) => {
+    if ((event.key === "Escape" || event.key === "Esc") && imagePreviewOverlayEl && !imagePreviewOverlayEl.hidden) {
+        closeImagePreview();
+        return;
+    }
+    if (imagePreviewOverlayEl && !imagePreviewOverlayEl.hidden) {
+        if (event.key === "+" || event.key === "=") {
+            event.preventDefault();
+            applyImagePreviewZoom(imagePreviewZoom * IMAGE_PREVIEW_ZOOM_STEP);
+            return;
+        }
+        if (event.key === "-" || event.key === "_") {
+            event.preventDefault();
+            applyImagePreviewZoom(imagePreviewZoom / IMAGE_PREVIEW_ZOOM_STEP);
+            return;
+        }
+        if (event.key === "0") {
+            event.preventDefault();
+            applyImagePreviewZoom(1);
+            return;
+        }
+    }
     if ((event.key === "Escape" || event.key === "Esc") && searchOverlay && !searchOverlay.hidden) {
         closeSearchOverlay();
         return;
@@ -782,6 +934,7 @@ window.addEventListener("beforeunload", persistScrollPosition);
 themeToggleBtn.addEventListener("click", toggleTheme);
 bindSidebarResizer(leftResizer, "left");
 bindSidebarResizer(rightResizer, "right");
+bindImagePreview();
 
 initTheme();
 applyDesktopLayoutFromStorage();

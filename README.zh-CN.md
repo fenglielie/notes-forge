@@ -168,6 +168,7 @@ notes-forge serve --source-from . --footer "© Your Name"
 - `notes-forge build` 不会把每个 `.md`、`.pdf` 或 `.ipynb` 单独转换成 HTML 页面。
 - 生成的 `public` 目录包含：
   - 统一前端入口：`index.html`
+  - 前端静态资源：`assets/notes-forge/*.css` 与 `assets/notes-forge/*.js`
   - 内容索引：`tree.json`
   - 从输入目录复制得到的原始内容文件
     - 默认：按 `--include` 选择的内容类型，以及 Markdown 本地图片资源

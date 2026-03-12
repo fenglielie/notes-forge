@@ -17,7 +17,12 @@ from notes_forge.fs_tree import (
     resolve_ignored_dirs,
 )
 from notes_forge.runtime_logging import log_notice, log_ok
-from notes_forge.ui_assets import read_asset_bytes, render_index_html
+from notes_forge.ui_assets import (
+    FRONTEND_ASSET_DIR,
+    FRONTEND_ASSET_FILES,
+    read_asset_bytes,
+    render_index_html,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +175,10 @@ def build_site(
         ),
         encoding="utf-8",
     )
+    frontend_asset_dir = output_dir / FRONTEND_ASSET_DIR
+    frontend_asset_dir.mkdir(parents=True, exist_ok=True)
+    for asset_name in FRONTEND_ASSET_FILES:
+        (frontend_asset_dir / asset_name).write_bytes(read_asset_bytes(asset_name))
     (output_dir / "favicon.ico").write_bytes(read_asset_bytes("favicon.ico"))
 
     folders, md_files, pdf_files, ipynb_files = _tree_stats(tree)

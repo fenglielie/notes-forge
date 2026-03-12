@@ -47,9 +47,11 @@ def read_asset_bytes(filename: str) -> bytes:
 
 
 HEAD_SNIPPET = read_asset_text("head.html")
-STYLE_CSS = read_asset_text("style.css")
 BODY_HTML = read_asset_text("body.html")
-APP_JS = read_asset_text("app.js")
+FRONTEND_ASSET_DIR = "assets/notes-forge"
+FRONTEND_CSS_FILES = ["style-base.css", "style-dark.css"]
+FRONTEND_JS_FILES = ["app-part1.js", "app-part2.js", "app-part3.js"]
+FRONTEND_ASSET_FILES = [*FRONTEND_CSS_FILES, *FRONTEND_JS_FILES]
 
 
 def render_index_html(
@@ -71,14 +73,20 @@ def render_index_html(
         "footerText": footer_text,
         "serveMode": serve_mode,
     }
+    css_links = "\n".join(
+        f'    <link rel="stylesheet" href="{FRONTEND_ASSET_DIR}/{filename}">'
+        for filename in FRONTEND_CSS_FILES
+    )
+    js_scripts = "\n".join(
+        f'    <script src="{FRONTEND_ASSET_DIR}/{filename}" defer></script>'
+        for filename in FRONTEND_JS_FILES
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 
 <head>
 {HEAD_SNIPPET}
-    <style>
-{STYLE_CSS}
-    </style>
+{css_links}
 </head>
 
 <body>
@@ -86,9 +94,7 @@ def render_index_html(
     <script>
 window.NOTES_FORGE_CONFIG = {json.dumps(ui_config, ensure_ascii=False)};
     </script>
-    <script>
-{APP_JS}
-    </script>
+{js_scripts}
 </body>
 
 </html>

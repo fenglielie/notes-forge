@@ -28,7 +28,7 @@ from notes_forge.fs_tree import (
     resolve_ignored_dirs,
 )
 from notes_forge.runtime_logging import _emit_http_access_log, log_notice, log_ok
-from notes_forge.ui_assets import read_asset_bytes, render_index_html
+from notes_forge.ui_assets import FRONTEND_ASSET_DIR, read_asset_bytes, render_index_html
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,27 @@ def _send_headers_only(
     handler.send_header("Content-Type", content_type)
     handler.send_header("Content-Length", str(data_len))
     handler.end_headers()
+
+
+def _frontend_asset_response(req_path: str) -> tuple[bytes, str] | None:
+    prefix = f"/{FRONTEND_ASSET_DIR}/"
+    if not req_path.startswith(prefix):
+        return None
+    asset_name = req_path[len(prefix) :]
+    if not asset_name or "/" in asset_name or "\\" in asset_name:
+        return None
+    try:
+        data = read_asset_bytes(asset_name)
+    except FileNotFoundError:
+        return None
+    suffix = Path(asset_name).suffix.lower()
+    if suffix == ".css":
+        content_type = "text/css; charset=utf-8"
+    elif suffix == ".js":
+        content_type = "application/javascript; charset=utf-8"
+    else:
+        content_type = "application/octet-stream"
+    return data, content_type
 
 
 def make_memory_handler(
@@ -146,6 +167,11 @@ def make_memory_handler(
                 data = read_asset_bytes("favicon.ico")
                 _send_bytes(self, data, "image/x-icon")
                 return
+            frontend_asset = _frontend_asset_response(req_path)
+            if frontend_asset is not None:
+                data, content_type = frontend_asset
+                _send_bytes(self, data, content_type)
+                return
             target = _resolve_request_file(req_path)
             if target is None or not _is_allowed_request_file(target):
                 self.send_error(404, "Not Found")
@@ -193,6 +219,11 @@ def make_memory_handler(
             if req_path == "/favicon.ico":
                 data_len = len(read_asset_bytes("favicon.ico"))
                 _send_headers_only(self, data_len, "image/x-icon")
+                return
+            frontend_asset = _frontend_asset_response(req_path)
+            if frontend_asset is not None:
+                data, content_type = frontend_asset
+                _send_headers_only(self, len(data), content_type)
                 return
             target = _resolve_request_file(req_path)
             if target is None or not _is_allowed_request_file(target):

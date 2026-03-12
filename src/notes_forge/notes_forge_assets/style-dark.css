@@ -1,0 +1,294 @@
+body.dark {
+    background: #0d1117;
+    color: #c9d1d9;
+}
+
+body.dark .topbar,
+body.dark .sidebar,
+body.dark .sidebar-header,
+body.dark .toc-sidebar,
+body.dark .toc-header,
+body.dark .article-wrapper {
+    background: #161b22;
+    color: #c9d1d9;
+    border-color: #30363d;
+}
+
+body.dark .backend-status-banner {
+    border-color: #7d3131;
+    background: #3d1f1f;
+    color: #ffb4b4;
+}
+
+body.dark .backend-status-retry {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #d1d5db;
+}
+
+body.dark .backend-status-retry:hover {
+    background: #273244;
+}
+
+body.dark .tree-label:hover,
+body.dark .toc-item:hover {
+    background: #21262d;
+}
+
+body.dark #viewer a {
+    color: #7cc9ff;
+    text-decoration-color: rgba(124, 201, 255, 0.55);
+}
+
+body.dark #viewer a:visited {
+    color: #b9a6ff;
+    text-decoration-color: rgba(185, 166, 255, 0.5);
+}
+
+body.dark #viewer a:hover,
+body.dark #viewer a:focus-visible {
+    color: #a9ddff;
+    text-decoration-color: rgba(169, 221, 255, 0.9);
+}
+
+body.dark .tree-label.active {
+    background: #1f6feb;
+    color: #fff;
+}
+
+body.dark .toc-item {
+    color: #c9d1d9;
+}
+
+body.dark .toc-item.active {
+    background: #1f2937;
+    color: #58a6ff;
+}
+
+body.dark pre,
+body.dark .table-scroll {
+    background: #0d1117;
+    border-color: #30363d;
+}
+
+body.dark table th,
+body.dark table td {
+    border-color: #30363d;
+}
+
+body.dark table tr:nth-child(2n) {
+    background-color: #11161d;
+}
+
+body.dark .copy-btn,
+body.dark .topbar-btn,
+body.dark .panel-close,
+body.dark .fab-btn,
+body.dark .sidebar-action-btn {
+    background: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+body.dark .topbar-btn[aria-pressed="true"] {
+    background: #1f2937;
+    border-color: #32547f;
+    color: #7cc9ff;
+}
+
+body.dark .fab-btn:hover {
+    background: #253244;
+}
+
+body.dark .sidebar-action-btn:hover {
+    background: #253244;
+}
+
+body.dark .page-footer {
+    border-color: #30363d;
+    color: #8b949e;
+}
+
+body.dark .page-footer a {
+    text-decoration-color: rgba(139, 148, 158, 0.55);
+}
+
+body.dark .page-footer a:hover,
+body.dark .page-footer a:focus-visible {
+    color: #c9d1d9;
+    text-decoration-color: rgba(201, 209, 217, 0.8);
+}
+
+body.dark .empty-hint,
+body.dark .topbar-title {
+    color: #8b949e;
+}
+
+body.dark .tree-container,
+body.dark .toc-container,
+body.dark .content,
+body.dark pre,
+body.dark .table-scroll {
+    scrollbar-color: #4b5563 transparent;
+}
+
+
+body.dark .pdf-viewer-frame {
+    background: #0d1117;
+    border-color: #30363d;
+}
+
+body.dark .pdfjs-shell {
+    background: #161b22;
+    border-color: #30363d;
+}
+
+body.dark .pdfjs-toolbar {
+    background: #111827;
+    border-bottom-color: #30363d;
+}
+
+body.dark .pdfjs-btn {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #d1d5db;
+}
+
+body.dark .pdfjs-info {
+    color: #9ca3af;
+}
+
+body.dark .pdfjs-canvas-wrap {
+    background: #0d1117;
+}
+
+body.dark .pdfjs-canvas {
+    border-color: #30363d;
+    box-shadow: none;
+}
+
+body.dark .pdfjs-text-layer>span {
+    color: transparent;
+}
+
+body.dark .pdf-native-open {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #d1d5db;
+}
+
+body.dark .pdf-mode-btn {
+    border-color: #4b5563;
+    background: #1f2937;
+    color: #9ca3af;
+}
+
+body.dark .pdf-mode-btn.active {
+    color: #bcd8ff;
+    background: #233452;
+    border-color: #3d5f95;
+}
+
+body.dark .pdf-native-open:hover {
+    background: #273244;
+}
+
+body.dark .search-overlay {
+    background: rgba(1, 4, 9, 0.55);
+}
+
+body.dark .search-panel {
+    background: #161b22;
+    border-color: #30363d;
+}
+
+body.dark .search-input {
+    background: #161b22;
+    color: #c9d1d9;
+    border-bottom-color: #30363d;
+}
+
+body.dark .search-result-item:hover {
+    background: #21262d;
+}
+
+body.dark .search-section-title {
+    color: #8b949e;
+    background: #161b22;
+}
+
+body.dark .search-result-title {
+    color: #c9d1d9;
+}
+
+body.dark .search-hit-tag {
+    color: #8b949e;
+}
+
+body.dark .search-result-snippet {
+    color: #8b949e;
+}
+
+body.dark .search-result-snippet mark {
+    background: #524000;
+    color: #ffe08a;
+}
+
+body.dark .notebook-cell {
+    background: #161b22;
+    border-color: #30363d;
+}
+
+body.dark #viewer :not(pre)>code {
+    background: #1b2430;
+    color: #cbd5e1;
+}
+
+body.dark .nb-cell-label {
+    color: #8b949e;
+}
+
+body.dark .file-icon {
+    border-color: #30363d;
+    background: #21262d;
+    color: #8b949e;
+}
+
+body.dark .file-icon-md {
+    color: #9dc2ff;
+    background: #1b2a40;
+    border-color: #2f4f7d;
+}
+
+body.dark .file-icon-pdf {
+    color: #ffb0ab;
+    background: #3a1f21;
+    border-color: #6a3136;
+}
+
+body.dark .file-icon-ipynb {
+    color: #ffd7a3;
+    background: #3d2b14;
+    border-color: #6a4a24;
+}
+
+body.dark .tree-label.active .file-icon {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+
+body.dark .nb-output-image-el {
+    border-color: #30363d;
+    background: #0d1117;
+}
+
+body.dark .tree-container::-webkit-scrollbar-thumb,
+body.dark .toc-container::-webkit-scrollbar-thumb,
+body.dark .content::-webkit-scrollbar-thumb,
+body.dark pre::-webkit-scrollbar-thumb,
+body.dark .table-scroll::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-color: transparent;
+    background-clip: padding-box;
+}

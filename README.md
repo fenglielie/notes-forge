@@ -168,6 +168,7 @@ notes-forge serve --source-from . --footer "© Your Name"
 - `notes-forge build` does not turn each `.md`, `.pdf`, or `.ipynb` file into its own HTML page.
 - The generated `public` directory contains:
   - A single frontend entry point: `index.html`
+  - Frontend static assets: `assets/notes-forge/*.css` and `assets/notes-forge/*.js`
   - A content index: `tree.json`
   - Source content files copied from the input directory
     - By default: selected content types (`md`, `pdf`, `ipynb`) and local Markdown image assets

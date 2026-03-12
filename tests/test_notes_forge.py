@@ -357,6 +357,8 @@ class TestNotesForgePortFallback(unittest.TestCase):
             self.assertFalse((out / "secret.py").exists())
             self.assertTrue((out / "index.html").exists())
             self.assertTrue((out / "tree.json").exists())
+            self.assertTrue((out / "assets" / "notes-forge" / "app-part1.js").exists())
+            self.assertTrue((out / "assets" / "notes-forge" / "style-base.css").exists())
 
     def test_build_site_copy_all_files_option_keeps_non_hidden_files(self):
         with workspace_tempdir() as src_tmp, workspace_tempdir() as out_tmp:

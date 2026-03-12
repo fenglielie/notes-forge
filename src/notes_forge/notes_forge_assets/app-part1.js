@@ -537,6 +537,8 @@ async function renderAllPdfPages() {
 
             const pageWrap = document.createElement("div");
             pageWrap.className = "pdfjs-page";
+            pageWrap.dataset.pageNo = String(pageNo);
+            pageWrap.id = `pdf-page-${pageNo}`;
             const canvas = document.createElement("canvas");
             canvas.className = "pdfjs-canvas";
             const textLayer = document.createElement("div");
@@ -572,6 +574,117 @@ async function renderAllPdfPages() {
     }
 }
 
+async function resolvePdfOutlinePageNumber(doc, destValue) {
+    if (!doc || destValue == null) return null;
+    let destination = destValue;
+    if (typeof destination === "string") {
+        try {
+            destination = await doc.getDestination(destination);
+        } catch {
+            return null;
+        }
+    }
+    if (!Array.isArray(destination) || destination.length === 0) return null;
+    const pageRef = destination[0];
+    if (typeof pageRef === "number" && Number.isInteger(pageRef) && pageRef >= 0) {
+        return pageRef + 1;
+    }
+    if (!pageRef || typeof pageRef !== "object") return null;
+    try {
+        const pageIndex = await doc.getPageIndex(pageRef);
+        return pageIndex + 1;
+    } catch {
+        return null;
+    }
+}
+
+async function renderPdfOutlineToc() {
+    if (!tocContainer) return;
+    if (hideTocUi) {
+        tocContainer.innerHTML = `<div class="empty-hint">TOC hidden</div>`;
+        scheduleAutoFitSidebar("right");
+        return;
+    }
+    if (!activePdfDoc || typeof activePdfDoc.getOutline !== "function") {
+        tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable for PDF</div>`;
+        scheduleAutoFitSidebar("right");
+        return;
+    }
+
+    let outline = null;
+    try {
+        outline = await activePdfDoc.getOutline();
+    } catch {
+        outline = null;
+    }
+    if (!Array.isArray(outline) || outline.length === 0) {
+        tocContainer.innerHTML = `<div class="empty-hint">No PDF outline</div>`;
+        scheduleAutoFitSidebar("right");
+        return;
+    }
+
+    const entries = [];
+    const collectEntries = (items, level) => {
+        items.forEach((item) => {
+            if (!item || typeof item !== "object") return;
+            entries.push({
+                id: `pdf-outline-${entries.length + 1}`,
+                title: String(item.title || "Untitled").trim() || "Untitled",
+                level: Math.min(Math.max(level, 1), 6),
+                dest: item.dest,
+            });
+            if (Array.isArray(item.items) && item.items.length > 0) {
+                collectEntries(item.items, level + 1);
+            }
+        });
+    };
+    collectEntries(outline, 1);
+
+    const resolvedPages = await Promise.all(
+        entries.map((entry) => resolvePdfOutlinePageNumber(activePdfDoc, entry.dest))
+    );
+    const renderable = entries
+        .map((entry, index) => ({ entry, pageNo: resolvedPages[index] }))
+        .filter((item) => Number.isFinite(item.pageNo));
+    if (!renderable.length) {
+        tocContainer.innerHTML = `<div class="empty-hint">No PDF outline</div>`;
+        scheduleAutoFitSidebar("right");
+        return;
+    }
+
+    tocContainer.innerHTML = renderable
+        .map((item) => {
+            const pageNo = Number(item.pageNo);
+            return `
+    <a class="toc-item toc-level-${item.entry.level}" href="#pdf-page-${pageNo}" data-toc-id="${item.entry.id}" data-pdf-page="${pageNo}">
+      ${escapeHtml(item.entry.title)}
+    </a>
+  `;
+        })
+        .join("");
+
+    tocContainer.querySelectorAll(".toc-item").forEach((link) => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            const rawPageNo = Number(link.getAttribute("data-pdf-page"));
+            if (!Number.isFinite(rawPageNo) || rawPageNo < 1) return;
+            const targetPage = document.getElementById(`pdf-page-${rawPageNo}`);
+            if (targetPage) {
+                targetPage.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            const tocId = link.getAttribute("data-toc-id") || "";
+            if (tocId) setActiveTOC(tocId);
+        });
+    });
+
+    const firstToc = tocContainer.querySelector(".toc-item");
+    if (firstToc) {
+        const firstId = firstToc.getAttribute("data-toc-id") || "";
+        if (firstId) setActiveTOC(firstId);
+    }
+    scheduleAutoFitSidebar("right");
+}
+
 async function initPdfJsViewer(pdfUrl) {
     const pdfjsLib = await ensurePdfJsReady();
     activePdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
@@ -595,6 +708,10 @@ async function renderPdfByMode(mode, options = {}) {
             <iframe class="pdf-viewer-frame" src="${currentPdfSourceUrl}#page=1&zoom=page-width" title="${escapeHtml(currentPdfTitle)}"></iframe>
         `;
         setMetaHtml(`<div class="article-stats">PDF loaded with browser native viewer</div>`);
+        if (tocContainer) {
+            tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable for PDF (native viewer)</div>`;
+            scheduleAutoFitSidebar("right");
+        }
         bindPdfModeSwitchHandlers();
         return;
     }
@@ -641,6 +758,7 @@ async function renderPdfByMode(mode, options = {}) {
             // Keep current pages when transient render fails.
         });
     });
+    await renderPdfOutlineToc();
     setMetaHtml(`<div class="article-stats">${activePdfDoc.numPages} pages</div>`);
 }
 

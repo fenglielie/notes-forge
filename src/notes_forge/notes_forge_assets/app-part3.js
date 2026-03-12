@@ -501,9 +501,6 @@ async function loadPdfDocument(path) {
         currentPdfSourceUrl = encodeURI(currentFilePath);
         currentPdfTitle = title;
         await renderPdfByMode(getDefaultPdfViewMode(), { persistPreference: false });
-
-        tocContainer.innerHTML = `<div class="empty-hint">TOC unavailable for PDF</div>`;
-        scheduleAutoFitSidebar("right");
         updatePageTitle(currentFilePath, viewer);
         contentEl.scrollTop = 0;
         const state = getReadingState();

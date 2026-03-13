@@ -421,6 +421,62 @@ class TestNotesForgePortFallback(unittest.TestCase):
             handler.send_error.assert_not_called()
             mock_super_get.assert_called_once()
 
+    def test_memory_handler_end_headers_sets_no_cache(self):
+        with workspace_tempdir() as tmp:
+            root = Path(tmp)
+            handler_cls = server_ops.make_memory_handler(root, {"md"})
+            handler = handler_cls.__new__(handler_cls)
+            handler.send_header = MagicMock()
+
+            with patch("http.server.SimpleHTTPRequestHandler.end_headers") as mock_end:
+                handler.end_headers()
+
+            sent_headers = [tuple(call.args) for call in handler.send_header.call_args_list]
+            self.assertIn(
+                ("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0"),
+                sent_headers,
+            )
+            self.assertIn(("Pragma", "no-cache"), sent_headers)
+            self.assertIn(("Expires", "0"), sent_headers)
+            mock_end.assert_called_once()
+
+    def test_is_client_disconnect_error(self):
+        self.assertTrue(server_ops._is_client_disconnect_error(BrokenPipeError()))
+        self.assertTrue(
+            server_ops._is_client_disconnect_error(
+                OSError(104, "Connection reset by peer")
+            )
+        )
+        self.assertFalse(server_ops._is_client_disconnect_error(RuntimeError("x")))
+
+    def test_server_handle_error_ignores_client_disconnect(self):
+        server = server_ops.NotesForgeThreadingHTTPServer.__new__(
+            server_ops.NotesForgeThreadingHTTPServer
+        )
+        with (
+            patch(
+                "notes_forge.server_ops.sys.exc_info",
+                return_value=(BrokenPipeError, BrokenPipeError(), None),
+            ),
+            patch("http.server.ThreadingHTTPServer.handle_error") as mock_super,
+        ):
+            server.handle_error(None, ("127.0.0.1", 8080))
+        mock_super.assert_not_called()
+
+    def test_server_handle_error_passthrough_for_other_exceptions(self):
+        server = server_ops.NotesForgeThreadingHTTPServer.__new__(
+            server_ops.NotesForgeThreadingHTTPServer
+        )
+        with (
+            patch(
+                "notes_forge.server_ops.sys.exc_info",
+                return_value=(RuntimeError, RuntimeError("boom"), None),
+            ),
+            patch("http.server.ThreadingHTTPServer.handle_error") as mock_super,
+        ):
+            server.handle_error(None, ("127.0.0.1", 8080))
+        mock_super.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -204,8 +204,12 @@ async function probeBackendHealth(manual = false) {
 }
 
 async function fetchWithBackendState(url, options) {
+    const requestOptions = { ...(options || {}) };
+    if (requestOptions.cache === undefined) {
+        requestOptions.cache = "no-store";
+    }
     try {
-        const response = await fetch(url, options);
+        const response = await fetch(url, requestOptions);
         if (serveModeUi && response.ok) {
             setBackendOnline();
         }

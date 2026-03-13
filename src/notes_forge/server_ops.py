@@ -1,5 +1,6 @@
 """HTTP serving operations."""
 
+import errno
 import json
 import logging
 import os
@@ -31,6 +32,13 @@ from notes_forge.runtime_logging import _emit_http_access_log, log_notice, log_o
 from notes_forge.ui_assets import FRONTEND_ASSET_DIR, read_asset_bytes, render_index_html
 
 logger = logging.getLogger(__name__)
+
+
+def _send_no_cache_headers(handler: SimpleHTTPRequestHandler) -> None:
+    # Serve mode should always reflect latest local file changes.
+    handler.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+    handler.send_header("Pragma", "no-cache")
+    handler.send_header("Expires", "0")
 
 
 def _send_bytes(
@@ -122,6 +130,10 @@ def make_memory_handler(
     class MemoryHandler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(md_root), **kwargs)
+
+        def end_headers(self) -> None:
+            _send_no_cache_headers(self)
+            super().end_headers()
 
         def log_message(self, format, *args):
             _emit_http_access_log(
@@ -326,6 +338,32 @@ def _is_port_in_use_error(exc: OSError) -> bool:
     return any(marker in message for marker in PORT_IN_USE_MESSAGE_MARKERS)
 
 
+def _is_client_disconnect_error(exc: BaseException) -> bool:
+    if isinstance(exc, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)):
+        return True
+    if isinstance(exc, OSError):
+        errno_value = exc.errno
+        if errno_value in {
+            getattr(errno, "EPIPE", None),
+            getattr(errno, "ECONNRESET", None),
+            getattr(errno, "ECONNABORTED", None),
+        }:
+            return True
+        winerror_value = getattr(exc, "winerror", None)
+        if winerror_value in {10053, 10054}:
+            return True
+    message = str(exc).lower()
+    return any(
+        marker in message
+        for marker in (
+            "broken pipe",
+            "connection reset",
+            "connection aborted",
+            "forcibly closed by the remote host",
+        )
+    )
+
+
 class NotesForgeThreadingHTTPServer(ThreadingHTTPServer):
     # Keep bind strict so a second process cannot silently share the same port.
     allow_reuse_address = os.name != "nt"
@@ -334,6 +372,13 @@ class NotesForgeThreadingHTTPServer(ThreadingHTTPServer):
         if os.name == "nt" and hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
         super().server_bind()
+
+    def handle_error(self, request, client_address) -> None:  # type: ignore[override]
+        _, exc, _ = sys.exc_info()
+        if exc is not None and _is_client_disconnect_error(exc):
+            logger.debug("Client disconnected before response completed.")
+            return
+        super().handle_error(request, client_address)
 
 
 class NotesForgeThreadingHTTPServerV6(NotesForgeThreadingHTTPServer):
@@ -400,6 +445,10 @@ def serve_html_dir(
     class StaticHandler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(html_dir), **kwargs)
+
+        def end_headers(self) -> None:
+            _send_no_cache_headers(self)
+            super().end_headers()
 
         def log_message(self, format, *args):
             _emit_http_access_log(

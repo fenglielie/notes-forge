@@ -17,10 +17,11 @@ function rewriteRelativeLinks(container, mdPath) {
             return;
         }
 
-        a.href = "#" + target.path;
+        const section = decodeHashValue(target.hash);
+        a.href = buildDocumentHash(target.path, section);
         a.addEventListener("click", function (e) {
             e.preventDefault();
-            loadDocument(target.path, fileFormat);
+            loadDocument(target.path, fileFormat, { section, historyMode: "push" });
         });
     });
 }
@@ -83,6 +84,101 @@ function slugify(text) {
         .replace(/\s+/g, "-");
 }
 
+function decodeHashValue(rawHash) {
+    const raw = String(rawHash || "").replace(/^#/, "").trim();
+    if (!raw) return "";
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return raw;
+    }
+}
+
+function buildDocumentHash(path, section = "") {
+    const normalizedPath = normalizePath(path || "");
+    if (!normalizedPath) return "#";
+    const params = new URLSearchParams();
+    if (section) {
+        params.set("section", section);
+    }
+    const query = params.toString();
+    return `#${normalizedPath}${query ? `?${query}` : ""}`;
+}
+
+function parseHashRoute(rawHash = window.location.hash) {
+    const hashBody = String(rawHash || "").replace(/^#/, "").trim();
+    if (!hashBody) {
+        return { kind: "empty", path: "", section: "" };
+    }
+
+    const decoded = decodeHashValue(hashBody);
+    const queryIndex = decoded.indexOf("?");
+    const candidatePath = queryIndex === -1 ? decoded : decoded.slice(0, queryIndex);
+    if (/\.(md|pdf|ipynb)$/i.test(candidatePath)) {
+        const params = new URLSearchParams(queryIndex === -1 ? "" : decoded.slice(queryIndex + 1));
+        return {
+            kind: "document",
+            path: normalizePath(candidatePath),
+            section: (params.get("section") || "").trim(),
+        };
+    }
+
+    return {
+        kind: "anchor",
+        path: "",
+        section: decoded,
+    };
+}
+
+function updateHashRoute(nextHash, historyMode = "replace") {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.hash = nextHash;
+    if (historyMode === "push") {
+        window.history.pushState(null, "", nextUrl);
+        return;
+    }
+    window.history.replaceState(null, "", nextUrl);
+}
+
+function scrollToSection(sectionId, options = {}) {
+    const {
+        smooth = false,
+        updateHistory = false,
+        historyMode = "push",
+    } = options;
+    const targetId = String(sectionId || "").trim();
+    if (!targetId) return false;
+
+    const escapedId = CSS.escape(targetId);
+    const target = viewer.querySelector(`#${escapedId}`);
+    if (!target) return false;
+
+    target.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        block: "start",
+    });
+    setActiveTOC(targetId);
+    if (updateHistory && currentFilePath) {
+        updateHashRoute(buildDocumentHash(currentFilePath, targetId), historyMode);
+    }
+    return true;
+}
+
+function bindInDocumentAnchorLinks(container) {
+    container.querySelectorAll('a[href^="#"]').forEach((link) => {
+        const targetId = decodeHashValue(link.getAttribute("href"));
+        if (!targetId) return;
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+            scrollToSection(targetId, {
+                smooth: true,
+                updateHistory: true,
+                historyMode: "push",
+            });
+        });
+    });
+}
+
 function buildTOC(container) {
     if (hideTocUi) {
         tocContainer.innerHTML = `<div class="empty-hint">TOC hidden</div>`;
@@ -127,11 +223,7 @@ function buildTOC(container) {
         link.addEventListener("click", function (e) {
             e.preventDefault();
             const id = this.dataset.tocId;
-            const target = document.getElementById(id);
-            if (target) {
-                target.scrollIntoView({ behavior: "smooth", block: "start" });
-                setActiveTOC(id);
-            }
+            scrollToSection(id, { smooth: true, updateHistory: true, historyMode: "push" });
         });
     });
 
@@ -285,15 +377,16 @@ function imagePayloadToDataUrl(imagePayload) {
     return `data:${mime};base64,${b64}`;
 }
 
-async function loadNotebookDocument(path) {
+async function loadNotebookDocument(path, options = {}) {
     try {
+        const { section = "", historyMode = "replace" } = options;
         contentEl.classList.remove("pdf-content-mode");
         clearPdfBlobUrl();
         articleWrapper.classList.remove("pdf-mode");
         persistScrollPosition();
         currentFilePath = normalizePath(path);
         setActiveFile(currentFilePath);
-        location.hash = currentFilePath;
+        updateHashRoute(buildDocumentHash(currentFilePath, section), historyMode);
         document.title = `Loading - ${BASE_TITLE}`;
 
         setMetaHtml(`<div class="article-stats">Loading notebook...</div>`);
@@ -405,11 +498,14 @@ async function loadNotebookDocument(path) {
         enableMathHorizontalScroll(viewer);
 
         buildTOC(viewer);
+        bindInDocumentAnchorLinks(viewer);
         updatePageTitle(currentFilePath, viewer);
         setMetaHtml(`<div class="article-stats">${cells.length} cells</div>`);
-        const state = getReadingState();
-        const savedScroll = Number(state.scrollByFile[currentFilePath] || 0);
-        contentEl.scrollTop = Number.isFinite(savedScroll) ? savedScroll : 0;
+        if (!scrollToSection(section, { smooth: false, updateHistory: false })) {
+            const state = getReadingState();
+            const savedScroll = Number(state.scrollByFile[currentFilePath] || 0);
+            contentEl.scrollTop = Number.isFinite(savedScroll) ? savedScroll : 0;
+        }
         closePanels();
         syncTopActionsOffset();
     } catch (err) {
@@ -421,15 +517,16 @@ async function loadNotebookDocument(path) {
     }
 }
 
-async function loadMarkdown(path) {
+async function loadMarkdown(path, options = {}) {
     try {
+        const { section = "", historyMode = "replace" } = options;
         contentEl.classList.remove("pdf-content-mode");
         clearPdfBlobUrl();
         articleWrapper.classList.remove("pdf-mode");
         persistScrollPosition();
         currentFilePath = normalizePath(path);
         setActiveFile(currentFilePath);
-        location.hash = currentFilePath;
+        updateHashRoute(buildDocumentHash(currentFilePath, section), historyMode);
         document.title = `Loading - ${BASE_TITLE}`;
 
         setMetaHtml(`<div class="article-stats">Loading...</div>`);
@@ -457,11 +554,14 @@ async function loadMarkdown(path) {
         enableMathHorizontalScroll(viewer);
 
         buildTOC(viewer);
+        bindInDocumentAnchorLinks(viewer);
         updatePageTitle(currentFilePath, viewer);
         renderArticleMeta(getDisplayTitle(currentFilePath, viewer), text);
-        const state = getReadingState();
-        const savedScroll = Number(state.scrollByFile[currentFilePath] || 0);
-        contentEl.scrollTop = Number.isFinite(savedScroll) ? savedScroll : 0;
+        if (!scrollToSection(section, { smooth: false, updateHistory: false })) {
+            const state = getReadingState();
+            const savedScroll = Number(state.scrollByFile[currentFilePath] || 0);
+            contentEl.scrollTop = Number.isFinite(savedScroll) ? savedScroll : 0;
+        }
         closePanels();
         syncTopActionsOffset();
     } catch (err) {
@@ -479,8 +579,9 @@ Possible causes:
     }
 }
 
-async function loadPdfDocument(path) {
+async function loadPdfDocument(path, options = {}) {
     try {
+        const { section = "", historyMode = "replace" } = options;
         clearPdfBlobUrl();
         activePdfDoc = null;
         persistScrollPosition();
@@ -488,7 +589,7 @@ async function loadPdfDocument(path) {
         articleWrapper.classList.add("pdf-mode");
         currentFilePath = normalizePath(path);
         setActiveFile(currentFilePath);
-        location.hash = currentFilePath;
+        updateHashRoute(buildDocumentHash(currentFilePath, section), historyMode);
         document.title = `Loading - ${BASE_TITLE}`;
 
         setMetaHtml(`<div class="article-stats">Loading PDF...</div>`);
@@ -520,21 +621,21 @@ async function loadPdfDocument(path) {
     }
 }
 
-async function loadMarkdownDocument(path) {
-    await loadMarkdown(path);
+async function loadMarkdownDocument(path, options = {}) {
+    await loadMarkdown(path, options);
 }
 
-async function loadDocument(path, preferredFormat = "") {
+async function loadDocument(path, preferredFormat = "", options = {}) {
     const fileFormat = inferFileFormat(path, preferredFormat);
     if (fileFormat === "pdf") {
-        await loadPdfDocument(path);
+        await loadPdfDocument(path, options);
         return;
     }
     if (fileFormat === "ipynb") {
-        await loadNotebookDocument(path);
+        await loadNotebookDocument(path, options);
         return;
     }
-    await loadMarkdownDocument(path);
+    await loadMarkdownDocument(path, options);
 }
 
 async function loadTree() {
@@ -553,21 +654,21 @@ async function loadTree() {
         renderTree(tree, treeContainer);
         scheduleAutoFitSidebar("left");
 
-        const hashPath = decodeURIComponent(location.hash.replace(/^#/, "").trim());
-        if (hashPath) {
-            loadDocument(hashPath);
+        const route = parseHashRoute();
+        if (route.kind === "document" && route.path) {
+            loadDocument(route.path, "", { section: route.section, historyMode: "replace" });
             return;
         }
 
         const topLevelDefault = pickTopLevelDefaultFile(tree);
         if (topLevelDefault) {
-            loadDocument(topLevelDefault.path, topLevelDefault.format || "");
+            loadDocument(topLevelDefault.path, topLevelDefault.format || "", { historyMode: "replace" });
             return;
         }
 
         const firstFile = findFirstFile(tree);
         if (firstFile) {
-            loadDocument(firstFile.path, firstFile.format || "");
+            loadDocument(firstFile.path, firstFile.format || "", { historyMode: "replace" });
         } else {
             setMetaText("No supported files found");
             viewer.textContent = "No supported files (.md/.pdf/.ipynb) in this folder.";
@@ -809,9 +910,19 @@ function bindImagePreview() {
 }
 
 window.addEventListener("hashchange", () => {
-    const hashPath = decodeURIComponent(location.hash.replace(/^#/, "").trim());
-    if (hashPath && hashPath !== currentFilePath) {
-        loadDocument(hashPath);
+    const route = parseHashRoute();
+    if (route.kind === "document" && route.path) {
+        if (route.path !== currentFilePath) {
+            loadDocument(route.path, "", { section: route.section, historyMode: "replace" });
+            return;
+        }
+        if (route.section) {
+            scrollToSection(route.section, { smooth: false, updateHistory: false });
+        }
+        return;
+    }
+    if (route.kind === "anchor" && route.section) {
+        scrollToSection(route.section, { smooth: false, updateHistory: false });
     }
 });
 

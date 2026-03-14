@@ -103,6 +103,12 @@ class TestNotesForgePortFallback(unittest.TestCase):
         )
         self.assertIn(f'"footerText": "{constants.DEFAULT_FOOTER_TEXT}"', html)
 
+    def test_frontend_asset_includes_markdown_anchor_routing_support(self):
+        script = ui_assets.read_asset_text("app-part3.js")
+        self.assertIn("function parseHashRoute", script)
+        self.assertIn('params.set("section", section)', script)
+        self.assertIn("bindInDocumentAnchorLinks", script)
+
     def test_is_port_in_use_error_by_errno(self):
         exc = OSError(98, "Address already in use")
         self.assertTrue(server_ops._is_port_in_use_error(exc))
